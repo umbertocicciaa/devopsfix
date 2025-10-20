@@ -11,7 +11,15 @@ export class ParserFactory {
   ]);
 
   static getParser(name: string): CICDParser {
-    const ParserClass = this.parsers.get(name.toLowerCase());
+    // Sanitize input to prevent any injection attempts
+    const sanitizedName = name.toLowerCase().trim();
+    
+    // Validate that the parser name only contains safe characters
+    if (!/^[a-z0-9-]+$/.test(sanitizedName)) {
+      throw new Error(`Invalid CI/CD type format: ${name}`);
+    }
+    
+    const ParserClass = this.parsers.get(sanitizedName);
     if (!ParserClass) {
       throw new Error(`Unknown CI/CD type: ${name}. Available types: ${Array.from(this.parsers.keys()).join(', ')}`);
     }

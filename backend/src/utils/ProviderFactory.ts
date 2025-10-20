@@ -11,7 +11,15 @@ export class ProviderFactory {
   ]);
 
   static getProvider(name: string, config: LLMProviderConfig): LLMProvider {
-    const ProviderClass = this.providers.get(name.toLowerCase());
+    // Sanitize input to prevent any injection attempts
+    const sanitizedName = name.toLowerCase().trim();
+    
+    // Validate that the provider name only contains safe characters
+    if (!/^[a-z0-9-]+$/.test(sanitizedName)) {
+      throw new Error(`Invalid provider name format: ${name}`);
+    }
+    
+    const ProviderClass = this.providers.get(sanitizedName);
     if (!ProviderClass) {
       throw new Error(`Unknown provider: ${name}. Available providers: ${Array.from(this.providers.keys()).join(', ')}`);
     }
