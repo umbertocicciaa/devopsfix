@@ -4,11 +4,14 @@ DevOpsFix is a modern fullstack application that leverages Large Language Models
 
 ## Features
 
+- **Repository Integration**: Fetch pipelines directly from GitHub, GitLab, or Bitbucket - no copy-paste needed!
 - **Multi-Platform Support**: Analyze pipelines from GitHub Actions, GitLab CI, and Jenkins
 - **Multiple LLM Providers**: Choose from ChatGPT, Claude, or Gemini for AI-powered analysis
 - **Extensible Architecture**: Plugin-based system allows easy addition of new CI/CD tools and LLM providers
+- **Auto-Detection**: Automatically detects CI/CD platform from repository file paths
 - **Real-time Analysis**: Get instant feedback on your pipeline configuration
 - **Validation & Suggestions**: Automatic validation with AI-generated improvement suggestions
+- **Dual Input Modes**: Fetch from repository URLs or manually paste pipeline configurations
 
 ## Architecture
 
@@ -40,9 +43,10 @@ devopsfix/
 │   │   │   ├── GitHubActionsParser.ts
 │   │   │   ├── GitLabCIParser.ts
 │   │   │   └── JenkinsParser.ts
-│   │   ├── utils/           # Factory classes
+│   │   ├── utils/           # Factory classes & utilities
 │   │   │   ├── ProviderFactory.ts
-│   │   │   └── ParserFactory.ts
+│   │   │   ├── ParserFactory.ts
+│   │   │   └── RepositoryFetcher.ts  # Fetch from GitHub/GitLab/Bitbucket
 │   │   ├── routes/          # API routes
 │   │   │   └── analyze.ts
 │   │   └── server.ts        # Main server file
@@ -129,13 +133,47 @@ Serve the `build` folder with a static server.
 
 ## Usage
 
-1. Open the application in your browser (http://localhost:3000 in development)
-2. Select your CI/CD platform (GitHub Actions, GitLab CI, or Jenkins)
-3. Choose your preferred LLM provider (ChatGPT, Claude, or Gemini)
-4. Paste your pipeline configuration in the text area
-5. Click "Analyze Pipeline" to get AI-powered analysis and suggestions
+### Option 1: Analyze from Repository (Recommended)
 
-## Example Pipeline Configurations
+1. Open the application in your browser (http://localhost:3000 in development)
+2. Keep the **"📁 From Repository"** mode selected (default)
+3. Enter the direct URL to your pipeline file:
+   - **GitHub**: `https://github.com/owner/repo/blob/branch/.github/workflows/ci.yml`
+   - **GitLab**: `https://gitlab.com/owner/repo/-/blob/branch/.gitlab-ci.yml`
+   - **Bitbucket**: `https://bitbucket.org/owner/repo/src/branch/Jenkinsfile`
+4. Choose your preferred LLM provider (ChatGPT, Claude, or Gemini)
+5. The CI/CD platform will be auto-detected from the file path
+6. Click "Analyze Pipeline" to get AI-powered analysis and suggestions
+
+### Option 2: Manual Paste
+
+1. Open the application in your browser (http://localhost:3000 in development)
+2. Click the **"✏️ Manual Paste"** button
+3. Select your CI/CD platform (GitHub Actions, GitLab CI, or Jenkins)
+4. Choose your preferred LLM provider (ChatGPT, Claude, or Gemini)
+5. Paste your pipeline configuration in the text area
+6. Click "Analyze Pipeline" to get AI-powered analysis and suggestions
+
+## Example Repository URLs
+
+### Real GitHub Workflows
+```
+https://github.com/actions/starter-workflows/blob/main/ci/node.js.yml
+https://github.com/actions/starter-workflows/blob/main/ci/python-app.yml
+https://github.com/actions/starter-workflows/blob/main/ci/docker-image.yml
+```
+
+### GitLab CI Examples
+```
+https://gitlab.com/owner/project/-/blob/main/.gitlab-ci.yml
+```
+
+### Bitbucket Pipelines
+```
+https://bitbucket.org/owner/repo/src/main/Jenkinsfile
+```
+
+## Example Pipeline Configurations (for Manual Paste)
 
 ### GitHub Actions Example
 ```yaml
@@ -266,9 +304,24 @@ import { NewCICDParser } from '../parsers/NewCICDParser';
 ## API Endpoints
 
 ### POST /api/analyze
-Analyze a CI/CD pipeline configuration.
+Analyze a CI/CD pipeline configuration from manual input or repository URL.
 
-**Request Body:**
+**Request Body (Option 1 - Repository URL):**
+```json
+{
+  "repositoryUrl": "https://github.com/owner/repo/blob/main/.github/workflows/ci.yml",
+  "cicdType": "github-actions|gitlab-ci|jenkins|auto-detect",
+  "llmProvider": "chatgpt|claude|gemini",
+  "config": {
+    "apiKey": "optional",
+    "model": "optional",
+    "temperature": 0.7,
+    "maxTokens": 2000
+  }
+}
+```
+
+**Request Body (Option 2 - Manual Content):**
 ```json
 {
   "pipelineContent": "string",
@@ -302,7 +355,8 @@ Analyze a CI/CD pipeline configuration.
     "analysis": "string",
     "fixes": "string"
   },
-  "provider": "string"
+  "provider": "string",
+  "detectedCICDType": "string (only when using repositoryUrl)"
 }
 ```
 

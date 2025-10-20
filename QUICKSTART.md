@@ -66,12 +66,24 @@ Get up and running with DevOpsFix in minutes!
 ### Step 1: Open the Application
 Navigate to http://localhost:3000 in your browser.
 
-### Step 2: Select Your Configuration
-- **CI/CD Platform**: Choose from GitHub Actions, GitLab CI, or Jenkins
-- **LLM Provider**: Select ChatGPT, Claude, or Gemini
+### Step 2: Choose Input Method
 
-### Step 3: Paste Your Pipeline
-Copy your CI/CD pipeline configuration and paste it into the text area.
+**Option A: From Repository (Recommended)**
+1. Keep the **"📁 From Repository"** button selected (default)
+2. Enter a direct URL to your pipeline file:
+   - GitHub: `https://github.com/owner/repo/blob/main/.github/workflows/ci.yml`
+   - GitLab: `https://gitlab.com/owner/repo/-/blob/main/.gitlab-ci.yml`
+   - Bitbucket: `https://bitbucket.org/owner/repo/src/main/Jenkinsfile`
+
+**Example URLs:**
+```
+https://github.com/actions/starter-workflows/blob/main/ci/node.js.yml
+https://github.com/actions/starter-workflows/blob/main/ci/python-app.yml
+```
+
+**Option B: Manual Paste**
+1. Click the **"✏️ Manual Paste"** button
+2. Copy your CI/CD pipeline configuration and paste it into the text area
 
 **Example GitHub Actions pipeline:**
 ```yaml
@@ -113,6 +125,14 @@ pipeline {
 }
 ```
 
+### Step 3: Select LLM Provider
+Choose your preferred AI provider:
+- **ChatGPT** (OpenAI)
+- **Claude** (Anthropic)
+- **Gemini** (Google)
+
+**Note:** When using Repository mode, the CI/CD platform is auto-detected from the file path. For Manual Paste mode, select the platform manually.
+
 ### Step 4: Analyze
 Click the "Analyze Pipeline" button and wait a few seconds for the results.
 
@@ -126,19 +146,28 @@ The analysis will show:
 
 ## Example Use Cases
 
-### 1. Validating a New Pipeline
+### 1. Analyzing Public Repositories
+Quickly analyze any public GitHub, GitLab, or Bitbucket pipeline:
+```
+https://github.com/actions/starter-workflows/blob/main/ci/node.js.yml
+```
+- No need to clone the repository
+- Instantly get AI-powered insights
+- Learn from real-world examples
+
+### 2. Validating a New Pipeline
 Before committing a new CI/CD configuration, paste it into DevOpsFix to:
 - Check for syntax errors
 - Validate required fields
 - Get suggestions for improvements
 
-### 2. Optimizing Existing Pipelines
+### 3. Optimizing Existing Pipelines
 For pipelines that work but could be better:
 - Get recommendations for caching
 - Learn about parallel execution opportunities
 - Discover security best practices
 
-### 3. Learning CI/CD Best Practices
+### 4. Learning CI/CD Best Practices
 Use DevOpsFix as a learning tool:
 - Experiment with different configurations
 - See what the AI recommends
