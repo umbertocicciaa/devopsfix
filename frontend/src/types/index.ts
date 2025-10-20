@@ -1,5 +1,6 @@
 export interface AnalysisRequest {
-  pipelineContent: string;
+  pipelineContent?: string;
+  repositoryUrl?: string;
   cicdType: string;
   llmProvider: string;
   config?: {
@@ -34,4 +35,5 @@ export interface AnalysisResponse {
   validation: Validation;
   analysis: LLMAnalysis;
   provider: string;
+  detectedCICDType?: string;
 }

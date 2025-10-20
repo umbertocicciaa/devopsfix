@@ -1,16 +1,34 @@
 import { Router, Request, Response } from 'express';
 import { ParserFactory } from '../utils/ParserFactory';
 import { ProviderFactory } from '../utils/ProviderFactory';
+import { RepositoryFetcher } from '../utils/RepositoryFetcher';
 
 const router = Router();
 
 router.post('/analyze', async (req: Request, res: Response) => {
   try {
-    const { pipelineContent, cicdType, llmProvider, config } = req.body;
+    let { pipelineContent, cicdType, llmProvider, config, repositoryUrl } = req.body;
+
+    // If repository URL is provided, fetch the content
+    if (repositoryUrl) {
+      try {
+        const { content, detectedCICDType } = await RepositoryFetcher.fetchPipeline(repositoryUrl);
+        pipelineContent = content;
+        
+        // Auto-detect CI/CD type if not provided
+        if (!cicdType && detectedCICDType) {
+          cicdType = detectedCICDType;
+        }
+      } catch (fetchError) {
+        return res.status(400).json({
+          error: fetchError instanceof Error ? fetchError.message : 'Failed to fetch pipeline from repository'
+        });
+      }
+    }
 
     if (!pipelineContent || !cicdType || !llmProvider) {
       return res.status(400).json({
-        error: 'Missing required fields: pipelineContent, cicdType, and llmProvider are required'
+        error: 'Missing required fields: pipelineContent (or repositoryUrl), cicdType, and llmProvider are required'
       });
     }
 
@@ -28,7 +46,8 @@ router.post('/analyze', async (req: Request, res: Response) => {
       parsed: parsedPipeline,
       validation,
       analysis,
-      provider: provider.getName()
+      provider: provider.getName(),
+      detectedCICDType: repositoryUrl ? cicdType : undefined
     });
   } catch (error) {
     console.error('Analysis error:', error);

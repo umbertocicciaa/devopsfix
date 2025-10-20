@@ -8,6 +8,8 @@ import { AnalysisResponse } from './types';
 
 function App() {
   const [pipelineContent, setPipelineContent] = useState('');
+  const [repositoryUrl, setRepositoryUrl] = useState('');
+  const [inputMode, setInputMode] = useState<'manual' | 'repository'>('repository');
   const [cicdType, setCICDType] = useState('');
   const [llmProvider, setLLMProvider] = useState('');
   const [results, setResults] = useState<AnalysisResponse | null>(null);
@@ -15,8 +17,14 @@ function App() {
   const [error, setError] = useState<string | null>(null);
 
   const handleAnalyze = async () => {
-    if (!pipelineContent.trim()) {
+    // Validate input based on mode
+    if (inputMode === 'manual' && !pipelineContent.trim()) {
       setError('Please enter pipeline configuration');
+      return;
+    }
+    
+    if (inputMode === 'repository' && !repositoryUrl.trim()) {
+      setError('Please enter a repository URL');
       return;
     }
 
@@ -26,11 +34,17 @@ function App() {
 
     try {
       const response = await api.analyzePipeline({
-        pipelineContent,
+        pipelineContent: inputMode === 'manual' ? pipelineContent : undefined,
+        repositoryUrl: inputMode === 'repository' ? repositoryUrl : undefined,
         cicdType,
         llmProvider
       });
       setResults(response);
+      
+      // If CI/CD type was auto-detected, update the state
+      if (response.detectedCICDType && inputMode === 'repository') {
+        setCICDType(response.detectedCICDType);
+      }
     } catch (err: any) {
       setError(err.response?.data?.error || err.message || 'An error occurred');
     } finally {
@@ -62,7 +76,14 @@ function App() {
           marginBottom: '30px'
         }}>
           <div>
-            <PipelineInput value={pipelineContent} onChange={setPipelineContent} />
+            <PipelineInput 
+              value={pipelineContent} 
+              onChange={setPipelineContent}
+              repositoryUrl={repositoryUrl}
+              onRepositoryUrlChange={setRepositoryUrl}
+              inputMode={inputMode}
+              onInputModeChange={setInputMode}
+            />
           </div>
           <div>
             <ConfigurationPanel
