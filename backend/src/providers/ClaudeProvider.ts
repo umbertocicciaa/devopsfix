@@ -1,3 +1,4 @@
+import axios from 'axios';
 import { LLMProvider, LLMProviderConfig, LLMResponse } from '../interfaces/LLMProvider';
 
 export class ClaudeProvider extends LLMProvider {
@@ -10,18 +11,65 @@ export class ClaudeProvider extends LLMProvider {
   }
 
   async analyzePipeline(pipelineContent: string, cicdType: string): Promise<LLMResponse> {
-    // This is a mock implementation. In a real scenario, you would call Anthropic's Claude API
-    const prompt = `Analyze this ${cicdType} pipeline and provide suggestions for improvements and fixes:\n\n${pipelineContent}`;
-    
-    // Simulated response - in production, this would call the Claude API
-    return {
-      suggestions: [
-        'Improve error handling in your pipeline steps',
-        'Add conditional job execution based on file changes',
-        'Implement better secret management'
-      ],
-      analysis: `Analyzed ${cicdType} pipeline using Claude. Found several areas for improvement in error handling and security.`,
-      fixes: 'Enhance error handling and implement secure secret management practices.'
-    };
+    const apiKey = this.config.apiKey || process.env.ANTHROPIC_API_KEY;
+
+    if (!apiKey) {
+      throw new Error('Anthropic API key is required. Provide config.apiKey or set ANTHROPIC_API_KEY.');
+    }
+
+    const model = this.config.model || 'claude-3-sonnet-20240229';
+    const temperature = this.config.temperature ?? 0.2;
+    const maxTokens = this.config.maxTokens ?? 900;
+    const { systemPrompt, userPrompt } = this.buildPromptParts(pipelineContent, cicdType);
+
+    try {
+      const response = await axios.post(
+        'https://api.anthropic.com/v1/messages',
+        {
+          model,
+          max_tokens: maxTokens,
+          temperature,
+          system: systemPrompt,
+          messages: [
+            {
+              role: 'user',
+              content: [
+                {
+                  type: 'text',
+                  text: userPrompt
+                }
+              ]
+            }
+          ]
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01'
+          },
+          timeout: 30000
+        }
+      );
+
+      const content = response.data?.content?.[0]?.text?.trim();
+
+      if (!content) {
+        throw new Error('Claude API returned an empty response.');
+      }
+
+      return this.parseLLMResponse(content);
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        const status = error.response?.status;
+        const details =
+          typeof error.response?.data === 'string'
+            ? error.response.data
+            : error.response?.data?.error?.message || error.message;
+        throw new Error(`Anthropic API request failed${status ? ` (status ${status})` : ''}: ${details}`);
+      }
+
+      throw error;
+    }
   }
 }

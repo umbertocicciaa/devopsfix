@@ -389,11 +389,13 @@ Create a `.env` file in the `backend` directory:
 ```env
 PORT=3001
 
-# Optional: LLM API Keys for production use
+# LLM API Keys (set the providers you intend to call)
 OPENAI_API_KEY=your_openai_api_key_here
 ANTHROPIC_API_KEY=your_anthropic_api_key_here
 GOOGLE_API_KEY=your_google_api_key_here
 ```
+
+Each provider has a sensible default model (`gpt-4o-mini`, `claude-3-sonnet-20240229`, `gemini-1.5-flash`). Override them per-request via the `config.model` field if needed.
 
 ### Frontend Environment Variables
 
@@ -413,7 +415,6 @@ REACT_APP_API_URL=http://localhost:3001/api
 ## Future Enhancements
 
 - Add more CI/CD platforms (CircleCI, Azure Pipelines, etc.)
-- Integrate actual LLM APIs (OpenAI, Anthropic, Google)
 - Add authentication and user management
 - Implement pipeline history and comparison
 - Add export functionality for analysis reports
@@ -430,4 +431,4 @@ ISC
 
 ## Author
 
-Umberto Ciccia
+Umberto Domenico Ciccia

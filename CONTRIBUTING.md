@@ -28,15 +28,14 @@ export class NewLLMProvider extends LLMProvider {
     
     // Example structure:
     const apiKey = this.config.apiKey || process.env.NEW_LLM_API_KEY;
+    const { systemPrompt, userPrompt } = this.buildPromptParts(pipelineContent, cicdType);
     
     // Make API call to your LLM service
     // ...
     
-    return {
-      suggestions: ['Suggestion 1', 'Suggestion 2'],
-      analysis: 'Overall analysis of the pipeline',
-      fixes: 'Recommended fixes'
-    };
+    // Replace rawOutput with the text returned by your LLM.
+    const rawOutput = '{ "analysis": "Overall analysis", "suggestions": ["Suggestion 1"], "fixes": "Recommended fixes" }';
+    return this.parseLLMResponse(rawOutput);
   }
 }
 ```

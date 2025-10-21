@@ -10,42 +10,79 @@ export interface RepositoryInfo {
 
 export class RepositoryFetcher {
   /**
+   * Normalize incoming URLs by trimming whitespace and removing query/hash fragments.
+   */
+  private static sanitizeInputUrl(url: string): string {
+    const trimmed = url.trim();
+    const hashIndex = trimmed.indexOf('#');
+    const withoutHash = hashIndex !== -1 ? trimmed.slice(0, hashIndex) : trimmed;
+    const queryIndex = withoutHash.indexOf('?');
+    return queryIndex !== -1 ? withoutHash.slice(0, queryIndex) : withoutHash;
+  }
+
+  /**
+   * Decode a slash-separated path into human-readable form.
+   */
+  private static decodePath(path: string): string {
+    return path
+      .split('/')
+      .map(segment => decodeURIComponent(segment))
+      .join('/');
+  }
+
+  /**
+   * Encode each segment of a slash-separated path to produce a safe URL path.
+   */
+  private static encodePath(path: string): string {
+    return path
+      .split('/')
+      .map(segment => encodeURIComponent(segment))
+      .join('/');
+  }
+
+  private static encodeGitRef(ref: string): string {
+    return this.encodePath(ref);
+  }
+
+  /**
    * Parse a repository URL to extract platform, owner, repo, and file path
    */
   static parseRepositoryUrl(url: string): RepositoryInfo | null {
+    const sanitizedUrl = this.sanitizeInputUrl(url);
+
     // GitHub: https://github.com/owner/repo/blob/branch/path/to/file
-    const githubMatch = url.match(/github\.com\/([^\/]+)\/([^\/]+)\/blob\/([^\/]+)\/(.+)/);
+    const githubMatch = sanitizedUrl.match(/github\.com\/([^\/]+)\/([^\/]+)\/blob\/([^\/]+)\/(.+)/);
     if (githubMatch) {
       return {
         platform: 'github',
-        owner: githubMatch[1],
-        repo: githubMatch[2],
-        branch: githubMatch[3],
-        filePath: githubMatch[4]
+        owner: decodeURIComponent(githubMatch[1]),
+        repo: decodeURIComponent(githubMatch[2]),
+        branch: this.decodePath(githubMatch[3]),
+        filePath: this.decodePath(githubMatch[4])
       };
     }
 
     // GitLab: https://gitlab.com/owner/repo/-/blob/branch/path/to/file
-    const gitlabMatch = url.match(/gitlab\.com\/([^\/]+)\/([^\/]+)\/-\/blob\/([^\/]+)\/(.+)/);
+    const gitlabMatch = sanitizedUrl.match(/gitlab\.com\/([^\/]+)\/([^\/]+)\/-\/blob\/([^\/]+)\/(.+)/);
     if (gitlabMatch) {
       return {
         platform: 'gitlab',
-        owner: gitlabMatch[1],
-        repo: gitlabMatch[2],
-        branch: gitlabMatch[3],
-        filePath: gitlabMatch[4]
+        owner: decodeURIComponent(gitlabMatch[1]),
+        repo: decodeURIComponent(gitlabMatch[2]),
+        branch: this.decodePath(gitlabMatch[3]),
+        filePath: this.decodePath(gitlabMatch[4])
       };
     }
 
     // Bitbucket: https://bitbucket.org/owner/repo/src/branch/path/to/file
-    const bitbucketMatch = url.match(/bitbucket\.org\/([^\/]+)\/([^\/]+)\/src\/([^\/]+)\/(.+)/);
+    const bitbucketMatch = sanitizedUrl.match(/bitbucket\.org\/([^\/]+)\/([^\/]+)\/src\/([^\/]+)\/(.+)/);
     if (bitbucketMatch) {
       return {
         platform: 'bitbucket',
-        owner: bitbucketMatch[1],
-        repo: bitbucketMatch[2],
-        branch: bitbucketMatch[3],
-        filePath: bitbucketMatch[4]
+        owner: decodeURIComponent(bitbucketMatch[1]),
+        repo: decodeURIComponent(bitbucketMatch[2]),
+        branch: this.decodePath(bitbucketMatch[3]),
+        filePath: this.decodePath(bitbucketMatch[4])
       };
     }
 
@@ -115,7 +152,7 @@ export class RepositoryFetcher {
    */
   private static async fetchFromGitHub(info: RepositoryInfo): Promise<string> {
     const branch = info.branch || 'main';
-    const rawUrl = `https://raw.githubusercontent.com/${info.owner}/${info.repo}/${branch}/${info.filePath}`;
+    const rawUrl = `https://raw.githubusercontent.com/${encodeURIComponent(info.owner)}/${encodeURIComponent(info.repo)}/${this.encodeGitRef(branch)}/${this.encodePath(info.filePath)}`;
     
     // Validate URL before making request
     this.validateUrl(rawUrl);
@@ -168,7 +205,7 @@ export class RepositoryFetcher {
    */
   private static async fetchFromBitbucket(info: RepositoryInfo): Promise<string> {
     const branch = info.branch || 'main';
-    const rawUrl = `https://bitbucket.org/${info.owner}/${info.repo}/raw/${branch}/${info.filePath}`;
+    const rawUrl = `https://bitbucket.org/${encodeURIComponent(info.owner)}/${encodeURIComponent(info.repo)}/raw/${this.encodeGitRef(branch)}/${this.encodePath(info.filePath)}`;
     
     // Validate URL before making request
     this.validateUrl(rawUrl);
