@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { BadRequestError, ExternalServiceError, NotFoundError } from './AppError';
 
 export interface RepositoryInfo {
   platform: string;
@@ -121,7 +122,7 @@ export class RepositoryFetcher {
   private static validateUrl(url: string): void {
     // Only allow HTTPS URLs
     if (!url.startsWith('https://')) {
-      throw new Error('Only HTTPS URLs are allowed for security reasons');
+      throw new BadRequestError('Only HTTPS URLs are allowed for security reasons.', { url });
     }
 
     // Whitelist of allowed domains
@@ -137,13 +138,17 @@ export class RepositoryFetcher {
       const domain = urlObj.hostname;
       
       if (!allowedDomains.includes(domain)) {
-        throw new Error(`Domain not allowed. Only ${allowedDomains.join(', ')} are supported`);
+        throw new BadRequestError('Domain not allowed. Only specific domains are supported.', {
+          url,
+          domain,
+          allowedDomains
+        });
       }
     } catch (error) {
-      if (error instanceof Error && error.message.includes('Domain not allowed')) {
+      if (error instanceof BadRequestError) {
         throw error;
       }
-      throw new Error('Invalid URL format');
+      throw new BadRequestError('Invalid URL format.', { url });
     }
   }
 
@@ -167,10 +172,32 @@ export class RepositoryFetcher {
       });
       return response.data;
     } catch (error) {
-      if (axios.isAxiosError(error) && error.response?.status === 404) {
-        throw new Error(`File not found: ${info.filePath} in ${info.owner}/${info.repo}`);
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 404) {
+          throw new NotFoundError('Pipeline file not found on GitHub.', {
+            owner: info.owner,
+            repo: info.repo,
+            path: info.filePath,
+            branch
+          });
+        }
+
+        throw new ExternalServiceError('GitHub pipeline fetch failed.', {
+          status: error.response?.status,
+          owner: info.owner,
+          repo: info.repo,
+          path: info.filePath,
+          branch,
+          message: error.message
+        });
       }
-      throw error;
+
+      throw new ExternalServiceError('Unexpected error while fetching from GitHub.', {
+        owner: info.owner,
+        repo: info.repo,
+        path: info.filePath,
+        branch
+      });
     }
   }
 
@@ -193,10 +220,32 @@ export class RepositoryFetcher {
       });
       return response.data;
     } catch (error) {
-      if (axios.isAxiosError(error) && error.response?.status === 404) {
-        throw new Error(`File not found: ${info.filePath} in ${info.owner}/${info.repo}`);
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 404) {
+          throw new NotFoundError('Pipeline file not found on GitLab.', {
+            owner: info.owner,
+            repo: info.repo,
+            path: info.filePath,
+            branch
+          });
+        }
+
+        throw new ExternalServiceError('GitLab pipeline fetch failed.', {
+          status: error.response?.status,
+          owner: info.owner,
+          repo: info.repo,
+          path: info.filePath,
+          branch,
+          message: error.message
+        });
       }
-      throw error;
+
+      throw new ExternalServiceError('Unexpected error while fetching from GitLab.', {
+        owner: info.owner,
+        repo: info.repo,
+        path: info.filePath,
+        branch
+      });
     }
   }
 
@@ -217,10 +266,32 @@ export class RepositoryFetcher {
       });
       return response.data;
     } catch (error) {
-      if (axios.isAxiosError(error) && error.response?.status === 404) {
-        throw new Error(`File not found: ${info.filePath} in ${info.owner}/${info.repo}`);
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 404) {
+          throw new NotFoundError('Pipeline file not found on Bitbucket.', {
+            owner: info.owner,
+            repo: info.repo,
+            path: info.filePath,
+            branch
+          });
+        }
+
+        throw new ExternalServiceError('Bitbucket pipeline fetch failed.', {
+          status: error.response?.status,
+          owner: info.owner,
+          repo: info.repo,
+          path: info.filePath,
+          branch,
+          message: error.message
+        });
       }
-      throw error;
+
+      throw new ExternalServiceError('Unexpected error while fetching from Bitbucket.', {
+        owner: info.owner,
+        repo: info.repo,
+        path: info.filePath,
+        branch
+      });
     }
   }
 
@@ -231,7 +302,7 @@ export class RepositoryFetcher {
     const repoInfo = this.parseRepositoryUrl(url);
     
     if (!repoInfo) {
-      throw new Error('Invalid repository URL. Supported platforms: GitHub, GitLab, Bitbucket');
+      throw new BadRequestError('Invalid repository URL. Supported platforms: GitHub, GitLab, Bitbucket.', { url });
     }
 
     let content: string;
@@ -247,7 +318,9 @@ export class RepositoryFetcher {
         content = await this.fetchFromBitbucket(repoInfo);
         break;
       default:
-        throw new Error(`Unsupported platform: ${repoInfo.platform}`);
+        throw new BadRequestError('Unsupported source control platform.', {
+          platform: repoInfo.platform
+        });
     }
 
     const detectedCICDType = this.detectCICDType(repoInfo.filePath);

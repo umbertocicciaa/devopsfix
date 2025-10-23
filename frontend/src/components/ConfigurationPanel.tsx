@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../services/api';
+import { ApiError, toApiError } from '../services/errors';
 
 interface ConfigurationPanelProps {
   cicdType: string;
@@ -16,10 +17,12 @@ export const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
 }) => {
   const [providers, setProviders] = useState<string[]>([]);
   const [cicdTypes, setCICDTypes] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchOptions = async () => {
       try {
+        setError(null);
         const [providersData, cicdTypesData] = await Promise.all([
           api.getProviders(),
           api.getCICDTypes()
@@ -34,7 +37,8 @@ export const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
           onCICDTypeChange(cicdTypesData[0]);
         }
       } catch (error) {
-        console.error('Failed to fetch configuration options:', error);
+        const apiError = error instanceof ApiError ? error : toApiError(error);
+        setError(apiError.message);
       }
     };
 
@@ -45,6 +49,20 @@ export const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
   return (
     <div className="configuration-panel">
       <h3>Configuration</h3>
+      {error && (
+        <div
+          style={{
+            marginBottom: '16px',
+            padding: '12px',
+            backgroundColor: '#ffebee',
+            color: '#c62828',
+            borderRadius: '4px',
+            fontSize: '13px'
+          }}
+        >
+          <strong>Failed to load options:</strong> {error}
+        </div>
+      )}
       <div style={{ marginBottom: '20px' }}>
         <label htmlFor="cicd-type" style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
           CI/CD Platform

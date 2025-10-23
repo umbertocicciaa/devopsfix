@@ -5,6 +5,7 @@ import { ConfigurationPanel } from './components/ConfigurationPanel';
 import { ResultsDisplay } from './components/ResultsDisplay';
 import { api } from './services/api';
 import { AnalysisResponse } from './types';
+import { ApiError, toApiError } from './services/errors';
 
 function App() {
   const [pipelineContent, setPipelineContent] = useState('');
@@ -45,8 +46,19 @@ function App() {
       if (response.detectedCICDType && inputMode === 'repository') {
         setCICDType(response.detectedCICDType);
       }
-    } catch (err: any) {
-      setError(err.response?.data?.error || err.message || 'An error occurred');
+    } catch (err) {
+      const apiError = err instanceof ApiError ? err : toApiError(err);
+      let detailsNote: string | null = null;
+
+      if (apiError.details && typeof apiError.details === 'object') {
+        const details = apiError.details as { missing?: unknown };
+        if (Array.isArray(details.missing) && details.missing.length > 0) {
+          detailsNote = `Missing: ${details.missing.join(', ')}`;
+        }
+      }
+
+      const formatted = apiError.code ? `${apiError.message} (code: ${apiError.code})` : apiError.message;
+      setError(detailsNote ? `${formatted}. ${detailsNote}` : formatted);
     } finally {
       setLoading(false);
     }

@@ -9,6 +9,7 @@ export interface LLMResponse {
   suggestions: string[];
   analysis: string;
   fixes: string;
+  improvedPipeline?: string;
 }
 
 export abstract class LLMProvider {
@@ -30,8 +31,9 @@ export abstract class LLMProvider {
       'You are a senior DevOps engineer who reviews CI/CD pipelines.',
       'Respond with clear, actionable guidance that prioritizes reliability, security, and performance.',
       'Always return a single JSON object with the following shape:',
-      '{ "analysis": string, "suggestions": string[ ], "fixes": string }.',
+      '{ "analysis": string, "suggestions": string[ ], "fixes": string, "improvedPipeline": string }.',
       'Keep suggestions concise and focused on highest-impact improvements.',
+      'The improvedPipeline value must contain the full pipeline rewritten with the recommended fixes applied. If no changes are required, repeat the original pipeline content.',
       'If information is missing, explain what is needed instead of guessing.',
       'Do not include Markdown, code fences, or additional commentary outside the JSON object.'
     ].join(' ');
@@ -40,6 +42,7 @@ export abstract class LLMProvider {
       `CI/CD platform: ${cicdType}`,
       'Task: Analyze the pipeline configuration. Highlight risks, gaps, and best-practice deviations.',
       'Return prioritized suggestions (at least three when possible) and summarize the most critical fixes.',
+      'Produce a complete improvedPipeline string that reflects all recommended fixes applied to the original configuration.',
       'Pipeline configuration:',
       pipelineContent
     ].join('\n\n');
@@ -73,10 +76,16 @@ export abstract class LLMProvider {
           ? parsed.fixes.trim()
           : analysis;
 
+      const improvedPipeline =
+        typeof parsed.improvedPipeline === 'string' && parsed.improvedPipeline.trim()
+          ? parsed.improvedPipeline.trim()
+          : undefined;
+
       return {
         analysis,
         suggestions,
-        fixes
+        fixes,
+        improvedPipeline
       };
     }
 

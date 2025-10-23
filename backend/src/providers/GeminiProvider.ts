@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { LLMProvider, LLMProviderConfig, LLMResponse } from '../interfaces/LLMProvider';
+import { ConfigurationError, ExternalServiceError } from '../utils/AppError';
 
 export class GeminiProvider extends LLMProvider {
   constructor(config: LLMProviderConfig) {
@@ -14,7 +15,10 @@ export class GeminiProvider extends LLMProvider {
     const apiKey = this.config.apiKey || process.env.GOOGLE_API_KEY;
 
     if (!apiKey) {
-      throw new Error('Google Gemini API key is required. Provide config.apiKey or set GOOGLE_API_KEY.');
+      throw new ConfigurationError('Google Gemini API key is required. Provide config.apiKey or set GOOGLE_API_KEY.', {
+        provider: 'gemini',
+        environmentVariable: 'GOOGLE_API_KEY'
+      });
     }
 
     const model = this.config.model || 'gemini-1.5-flash';
@@ -76,7 +80,7 @@ export class GeminiProvider extends LLMProvider {
         .trim();
 
       if (!content) {
-        throw new Error('Gemini API returned an empty response.');
+        throw new ExternalServiceError('Gemini API returned an empty response.', { provider: 'gemini' });
       }
 
       return this.parseLLMResponse(content);
@@ -87,10 +91,21 @@ export class GeminiProvider extends LLMProvider {
           error.response?.data?.error?.message ||
           error.response?.data?.error ||
           error.message;
-        throw new Error(`Gemini API request failed${status ? ` (status ${status})` : ''}: ${message}`);
+        throw new ExternalServiceError(
+          `Gemini API request failed${status ? ` (status ${status})` : ''}.`,
+          {
+            provider: 'gemini',
+            status,
+            message,
+            isTimeout: error.code === 'ECONNABORTED'
+          }
+        );
       }
 
-      throw error;
+      throw new ExternalServiceError('Unexpected error while communicating with Gemini.', {
+        provider: 'gemini',
+        message: error instanceof Error ? error.message : String(error)
+      });
     }
   }
 }

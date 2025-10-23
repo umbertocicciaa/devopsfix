@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { LLMProvider, LLMProviderConfig, LLMResponse } from '../interfaces/LLMProvider';
+import { ConfigurationError, ExternalServiceError } from '../utils/AppError';
 
 export class ChatGPTProvider extends LLMProvider {
   constructor(config: LLMProviderConfig) {
@@ -14,7 +15,10 @@ export class ChatGPTProvider extends LLMProvider {
     const apiKey = this.config.apiKey || process.env.OPENAI_API_KEY;
 
     if (!apiKey) {
-      throw new Error('OpenAI API key is required. Provide config.apiKey or set OPENAI_API_KEY.');
+      throw new ConfigurationError('OpenAI API key is required. Provide config.apiKey or set OPENAI_API_KEY.', {
+        provider: 'openai',
+        environmentVariable: 'OPENAI_API_KEY'
+      });
     }
 
     const model = this.config.model || 'gpt-4o-mini';
@@ -46,7 +50,7 @@ export class ChatGPTProvider extends LLMProvider {
       const content = response.data?.choices?.[0]?.message?.content?.trim();
 
       if (!content) {
-        throw new Error('OpenAI API returned an empty response.');
+        throw new ExternalServiceError('OpenAI API returned an empty response.', { provider: 'openai' });
       }
 
       return this.parseLLMResponse(content);
@@ -54,10 +58,21 @@ export class ChatGPTProvider extends LLMProvider {
       if (axios.isAxiosError(error)) {
         const status = error.response?.status;
         const message = error.response?.data?.error?.message || error.message;
-        throw new Error(`OpenAI API request failed${status ? ` (status ${status})` : ''}: ${message}`);
+        throw new ExternalServiceError(
+          `OpenAI API request failed${status ? ` (status ${status})` : ''}.`,
+          {
+            provider: 'openai',
+            status,
+            message,
+            isTimeout: error.code === 'ECONNABORTED'
+          }
+        );
       }
 
-      throw error;
+      throw new ExternalServiceError('Unexpected error while communicating with OpenAI.', {
+        provider: 'openai',
+        message: error instanceof Error ? error.message : String(error)
+      });
     }
   }
 }

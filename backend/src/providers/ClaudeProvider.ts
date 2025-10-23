@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { LLMProvider, LLMProviderConfig, LLMResponse } from '../interfaces/LLMProvider';
+import { ConfigurationError, ExternalServiceError } from '../utils/AppError';
 
 export class ClaudeProvider extends LLMProvider {
   constructor(config: LLMProviderConfig) {
@@ -14,7 +15,10 @@ export class ClaudeProvider extends LLMProvider {
     const apiKey = this.config.apiKey || process.env.ANTHROPIC_API_KEY;
 
     if (!apiKey) {
-      throw new Error('Anthropic API key is required. Provide config.apiKey or set ANTHROPIC_API_KEY.');
+      throw new ConfigurationError('Anthropic API key is required. Provide config.apiKey or set ANTHROPIC_API_KEY.', {
+        provider: 'anthropic',
+        environmentVariable: 'ANTHROPIC_API_KEY'
+      });
     }
 
     const model = this.config.model || 'claude-3-sonnet-20240229';
@@ -55,7 +59,7 @@ export class ClaudeProvider extends LLMProvider {
       const content = response.data?.content?.[0]?.text?.trim();
 
       if (!content) {
-        throw new Error('Claude API returned an empty response.');
+        throw new ExternalServiceError('Claude API returned an empty response.', { provider: 'anthropic' });
       }
 
       return this.parseLLMResponse(content);
@@ -66,10 +70,21 @@ export class ClaudeProvider extends LLMProvider {
           typeof error.response?.data === 'string'
             ? error.response.data
             : error.response?.data?.error?.message || error.message;
-        throw new Error(`Anthropic API request failed${status ? ` (status ${status})` : ''}: ${details}`);
+        throw new ExternalServiceError(
+          `Anthropic API request failed${status ? ` (status ${status})` : ''}.`,
+          {
+            provider: 'anthropic',
+            status,
+            message: details,
+            isTimeout: error.code === 'ECONNABORTED'
+          }
+        );
       }
 
-      throw error;
+      throw new ExternalServiceError('Unexpected error while communicating with Anthropic.', {
+        provider: 'anthropic',
+        message: error instanceof Error ? error.message : String(error)
+      });
     }
   }
 }

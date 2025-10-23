@@ -2,6 +2,7 @@ import { LLMProvider, LLMProviderConfig } from '../interfaces/LLMProvider';
 import { ChatGPTProvider } from '../providers/ChatGPTProvider';
 import { ClaudeProvider } from '../providers/ClaudeProvider';
 import { GeminiProvider } from '../providers/GeminiProvider';
+import { BadRequestError } from './AppError';
 
 export class ProviderFactory {
   private static providers: Map<string, new (config: LLMProviderConfig) => LLMProvider> = new Map([
@@ -16,12 +17,15 @@ export class ProviderFactory {
     
     // Validate that the provider name only contains safe characters
     if (!/^[a-z0-9-]+$/.test(sanitizedName)) {
-      throw new Error(`Invalid provider name format: ${name}`);
+      throw new BadRequestError('Invalid provider name format.', { provided: name });
     }
     
     const ProviderClass = this.providers.get(sanitizedName);
     if (!ProviderClass) {
-      throw new Error(`Unknown provider: ${name}. Available providers: ${Array.from(this.providers.keys()).join(', ')}`);
+      throw new BadRequestError('Unknown provider.', {
+        provided: name,
+        available: Array.from(this.providers.keys())
+      });
     }
     return new ProviderClass(config);
   }

@@ -27,6 +27,7 @@ export interface LLMAnalysis {
   suggestions: string[];
   analysis: string;
   fixes: string;
+  improvedPipeline: string;
 }
 
 export interface AnalysisResponse {
@@ -35,5 +36,6 @@ export interface AnalysisResponse {
   validation: Validation;
   analysis: LLMAnalysis;
   provider: string;
+  originalPipeline: string;
   detectedCICDType?: string;
 }
