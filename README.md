@@ -139,7 +139,7 @@ Serve the `build` folder with a static server.
 
 ### Option 1: Analyze from Repository (Recommended)
 
-1. Open the application in your browser (http://localhost:3000 in development)
+1. Open the application in your browser
 2. Keep the **"📁 From Repository"** mode selected (default)
 3. Enter the direct URL to your pipeline file:
    - **GitHub**: `https://github.com/owner/repo/blob/branch/.github/workflows/ci.yml`
@@ -151,7 +151,7 @@ Serve the `build` folder with a static server.
 
 ### Option 2: Manual Paste
 
-1. Open the application in your browser (http://localhost:3000 in development)
+1. Open the application in your browser
 2. Click the **"✏️ Manual Paste"** button
 3. Select your CI/CD platform (GitHub Actions, GitLab CI, or Jenkins)
 4. Choose your preferred LLM provider (ChatGPT, Claude, or Gemini)
@@ -428,10 +428,6 @@ REACT_APP_API_URL=http://localhost:3001/api
 ## Contributing
 
 Contributions are welcome! The plugin architecture makes it easy to add new providers and parsers.
-
-## License
-
-ISC
 
 ## Author
 
