@@ -15,15 +15,15 @@ Get up and running with DevOpsFix in minutes!
    cd devopsfix
    ```
 
-2. **Install backend dependencies**
+2. **Install frontend dependencies**
    ```bash
-   cd backend
+   cd frontend
    npm install
    ```
 
-3. **Install frontend dependencies**
+3. **(Optional) Install backend dependencies** if you plan to run the API server:
    ```bash
-   cd ../frontend
+   cd ../backend
    npm install
    ```
 
@@ -31,35 +31,34 @@ Get up and running with DevOpsFix in minutes!
 
 ### Option 1: Development Mode (Recommended for testing)
 
-1. **Start the backend server** (in terminal 1):
-   ```bash
-   cd backend
-   npm run dev
-   ```
-   The backend will start on http://localhost:3001
-
-2. **Start the frontend** (in terminal 2):
+1. **Start the frontend**:
    ```bash
    cd frontend
    npm start
    ```
    The frontend will open automatically at http://localhost:3000
 
-### Option 2: Production Mode
-
-1. **Build and start the backend**:
+2. **(Optional) Start the backend server** if you want the API server for extension work:
    ```bash
    cd backend
-   npm run build
-   npm start
+   npm run dev
    ```
 
-2. **Build the frontend**:
+### Option 2: Production Mode
+
+1. **Build the frontend**:
    ```bash
    cd frontend
    npm run build
    ```
    Then serve the `build` folder with a static server.
+
+2. **(Optional) Build and start the backend** if you need the API server:
+   ```bash
+   cd backend
+   npm run build
+   npm start
+   ```
 
 ## Using DevOpsFix
 
@@ -131,6 +130,8 @@ Choose your preferred AI provider:
 - **Claude** (Anthropic)
 - **Gemini** (Google)
 
+Enter the provider API key in the configuration panel. Keys are stored locally in your browser storage for static deployments.
+
 **Note:** When using Repository mode, the CI/CD platform is auto-detected from the file path. For Manual Paste mode, select the platform manually.
 
 ### Step 4: Analyze
@@ -188,7 +189,7 @@ Use DevOpsFix as a learning tool:
 ### Analysis fails
 - Ensure your pipeline syntax is valid YAML or Groovy
 - Check that you selected the correct CI/CD platform
-- Verify the backend server is running
+- Verify your LLM API key is present in the configuration panel
 
 ## Next Steps
 

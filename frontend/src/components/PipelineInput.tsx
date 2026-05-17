@@ -1,12 +1,14 @@
 import React from 'react';
+import { APP_COPY } from '../config/appCopy';
+import { INPUT_MODES, type InputMode } from '../config/appConfig';
 
 interface PipelineInputProps {
   value: string;
   onChange: (value: string) => void;
   repositoryUrl: string;
   onRepositoryUrlChange: (url: string) => void;
-  inputMode: 'manual' | 'repository';
-  onInputModeChange: (mode: 'manual' | 'repository') => void;
+  inputMode: InputMode;
+  onInputModeChange: (mode: InputMode) => void;
 }
 
 export const PipelineInput: React.FC<PipelineInputProps> = ({ 
@@ -20,51 +22,51 @@ export const PipelineInput: React.FC<PipelineInputProps> = ({
   return (
     <div className="pipeline-input">
       <div style={{ marginBottom: '15px' }}>
-        <h3>Pipeline Configuration</h3>
+        <h3>{APP_COPY.pipelineInput.heading}</h3>
         
         {/* Input Mode Selector */}
         <div style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
           <button
-            onClick={() => onInputModeChange('repository')}
+            onClick={() => onInputModeChange(INPUT_MODES.repository)}
             style={{
               padding: '8px 16px',
               fontSize: '14px',
-              fontWeight: inputMode === 'repository' ? 'bold' : 'normal',
-              color: inputMode === 'repository' ? 'white' : '#333',
-              backgroundColor: inputMode === 'repository' ? '#4CAF50' : '#f0f0f0',
+              fontWeight: inputMode === INPUT_MODES.repository ? 'bold' : 'normal',
+              color: inputMode === INPUT_MODES.repository ? 'white' : '#333',
+              backgroundColor: inputMode === INPUT_MODES.repository ? '#4CAF50' : '#f0f0f0',
               border: '1px solid #ddd',
               borderRadius: '4px',
               cursor: 'pointer',
               flex: 1
             }}
           >
-            📁 From Repository
+            {APP_COPY.pipelineInput.modes.repository}
           </button>
           <button
-            onClick={() => onInputModeChange('manual')}
+            onClick={() => onInputModeChange(INPUT_MODES.manual)}
             style={{
               padding: '8px 16px',
               fontSize: '14px',
-              fontWeight: inputMode === 'manual' ? 'bold' : 'normal',
-              color: inputMode === 'manual' ? 'white' : '#333',
-              backgroundColor: inputMode === 'manual' ? '#4CAF50' : '#f0f0f0',
+              fontWeight: inputMode === INPUT_MODES.manual ? 'bold' : 'normal',
+              color: inputMode === INPUT_MODES.manual ? 'white' : '#333',
+              backgroundColor: inputMode === INPUT_MODES.manual ? '#4CAF50' : '#f0f0f0',
               border: '1px solid #ddd',
               borderRadius: '4px',
               cursor: 'pointer',
               flex: 1
             }}
           >
-            ✏️ Manual Paste
+            {APP_COPY.pipelineInput.modes.manual}
           </button>
         </div>
       </div>
 
-      {inputMode === 'repository' ? (
+      {inputMode === INPUT_MODES.repository ? (
         <div>
           <label htmlFor="repository-url" style={{ display: 'block', marginBottom: '8px' }}>
-            <strong>Repository URL</strong>
+            <strong>{APP_COPY.pipelineInput.repository.label}</strong>
             <p style={{ margin: '5px 0', fontSize: '14px', color: '#666' }}>
-              Enter a direct link to your pipeline file (GitHub, GitLab, or Bitbucket)
+              {APP_COPY.pipelineInput.repository.helper}
             </p>
           </label>
           <input
@@ -72,7 +74,7 @@ export const PipelineInput: React.FC<PipelineInputProps> = ({
             id="repository-url"
             value={repositoryUrl}
             onChange={(e) => onRepositoryUrlChange(e.target.value)}
-            placeholder="https://github.com/owner/repo/blob/main/.github/workflows/ci.yml"
+            placeholder={APP_COPY.pipelineInput.repository.placeholder}
             style={{
               width: '100%',
               fontFamily: 'monospace',
@@ -91,11 +93,11 @@ export const PipelineInput: React.FC<PipelineInputProps> = ({
             borderRadius: '4px',
             border: '1px solid #e9ecef'
           }}>
-            <strong>Supported formats:</strong>
+            <strong>{APP_COPY.pipelineInput.repository.supportedFormatsLabel}</strong>
             <ul style={{ margin: '5px 0', paddingLeft: '20px' }}>
-              <li>GitHub: https://github.com/owner/repo/blob/branch/path/to/file</li>
-              <li>GitLab: https://gitlab.com/owner/repo/-/blob/branch/path/to/file</li>
-              <li>Bitbucket: https://bitbucket.org/owner/repo/src/branch/path/to/file</li>
+              {APP_COPY.pipelineInput.repository.supportedFormats.map((format) => (
+                <li key={format}>{format}</li>
+              ))}
             </ul>
           </div>
         </div>
@@ -103,14 +105,14 @@ export const PipelineInput: React.FC<PipelineInputProps> = ({
         <div>
           <label htmlFor="pipeline-content">
             <p style={{ margin: '5px 0', fontSize: '14px', color: '#666' }}>
-              Paste your CI/CD pipeline configuration below
+              {APP_COPY.pipelineInput.manual.helper}
             </p>
           </label>
           <textarea
             id="pipeline-content"
             value={value}
             onChange={(e) => onChange(e.target.value)}
-            placeholder="Paste your pipeline configuration here (YAML or Groovy)"
+            placeholder={APP_COPY.pipelineInput.manual.placeholder}
             rows={15}
             style={{
               width: '100%',

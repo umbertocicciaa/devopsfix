@@ -16,6 +16,7 @@ DevOpsFix is a modern fullstack application that leverages Large Language Models
 - **Real-time Analysis**: Get instant feedback on your pipeline configuration
 - **Validation & Suggestions**: Automatic validation with AI-generated improvement suggestions
 - **Dual Input Modes**: Fetch from repository URLs or manually paste pipeline configurations
+- **Browser-Stored API Keys**: Provide LLM keys in the UI and store them locally for static deployments
 
 ## Architecture
 
@@ -28,7 +29,8 @@ DevOpsFix is a modern fullstack application that leverages Large Language Models
 ### Frontend (React + TypeScript)
 - **Modern UI**: Clean, responsive interface built with React
 - **Real-time Feedback**: Instant validation and analysis results
-- **Configuration Panel**: Easy selection of CI/CD platform and LLM provider
+- **Configuration Panel**: Easy selection of CI/CD platform and LLM provider, plus local API key storage
+- **Static Deployment Ready**: Direct browser calls to LLM APIs without a backend dependency
 
 ## Project Structure
 
@@ -63,8 +65,9 @@ devopsfix/
 │   │   │   ├── PipelineInput.tsx
 │   │   │   ├── ConfigurationPanel.tsx
 │   │   │   └── ResultsDisplay.tsx
-│   │   ├── services/        # API service layer
-│   │   │   └── api.ts
+│   │   ├── analysis/        # Parsers/providers for in-browser analysis
+│   │   ├── services/        # Frontend analysis/storage services
+│   │   │   └── analysisService.ts
 │   │   ├── types/           # TypeScript type definitions
 │   │   │   └── index.ts
 │   │   ├── App.tsx
@@ -89,15 +92,15 @@ git clone https://github.com/umbertocicciaa/devopsfix.git
 cd devopsfix
 ```
 
-2. Install backend dependencies:
+2. Install frontend dependencies:
 ```bash
-cd backend
+cd frontend
 npm install
 ```
 
-3. Install frontend dependencies:
+3. (Optional) Install backend dependencies if you plan to run the API server:
 ```bash
-cd ../frontend
+cd ../backend
 npm install
 ```
 
@@ -105,19 +108,18 @@ npm install
 
 #### Development Mode
 
-1. Start the backend server:
-```bash
-cd backend
-npm run dev
-```
-The backend will run on http://localhost:3001
-
-2. In a new terminal, start the frontend:
+1. Start the frontend:
 ```bash
 cd frontend
 npm start
 ```
 The frontend will run on http://localhost:3000
+
+2. (Optional) Start the backend server if you need the API server for extension work:
+```bash
+cd backend
+npm run dev
+```
 
 #### Production Mode
 
@@ -386,9 +388,15 @@ Get list of supported CI/CD platforms.
 
 ## Configuration
 
-### Backend Environment Variables
+### Browser-Stored API Keys (Recommended)
 
-Create a `.env` file in the `backend` directory:
+Enter your LLM API keys directly in the frontend configuration panel. Keys are stored locally in your browser
+storage so the static build can call the LLM APIs without relying on environment variables.
+
+### Backend Environment Variables (Optional)
+
+If you run the backend API server for extension work, you can still provide API keys via a `.env` file in the
+`backend` directory:
 
 ```env
 PORT=3001
@@ -399,15 +407,8 @@ ANTHROPIC_API_KEY=your_anthropic_api_key_here
 GOOGLE_API_KEY=your_google_api_key_here
 ```
 
-Each provider has a sensible default model (`gpt-4o-mini`, `claude-3-sonnet-20240229`, `gemini-1.5-flash`). Override them per-request via the `config.model` field if needed.
-
-### Frontend Environment Variables
-
-Create a `.env` file in the `frontend` directory:
-
-```env
-REACT_APP_API_URL=http://localhost:3001/api
-```
+Each provider has a sensible default model (`gpt-4o-mini`, `claude-3-sonnet-20240229`, `gemini-1.5-flash`). Override
+them per-request via the `config.model` field if needed.
 
 ## Technology Stack
 

@@ -1,14 +1,19 @@
+import type { CICDTypeId, InputMode, LLMProviderId } from '../config/appConfig';
+
+export interface LLMProviderConfig {
+  apiKey?: string;
+  model?: string;
+  temperature?: number;
+  maxTokens?: number;
+}
+
 export interface AnalysisRequest {
   pipelineContent?: string;
   repositoryUrl?: string;
-  cicdType: string;
-  llmProvider: string;
-  config?: {
-    apiKey?: string;
-    model?: string;
-    temperature?: number;
-    maxTokens?: number;
-  };
+  cicdType?: CICDTypeId;
+  llmProvider: LLMProviderId;
+  inputMode: InputMode;
+  config?: LLMProviderConfig;
 }
 
 export interface ParsedPipeline {
@@ -27,7 +32,7 @@ export interface LLMAnalysis {
   suggestions: string[];
   analysis: string;
   fixes: string;
-  improvedPipeline: string;
+  improvedPipeline?: string;
 }
 
 export interface AnalysisResponse {
@@ -37,5 +42,5 @@ export interface AnalysisResponse {
   analysis: LLMAnalysis;
   provider: string;
   originalPipeline: string;
-  detectedCICDType?: string;
+  detectedCICDType?: CICDTypeId;
 }

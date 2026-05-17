@@ -1,81 +1,123 @@
 import axios from 'axios';
+import { APP_COPY } from '../config/appCopy';
+import { ERROR_CODES } from '../config/appConfig';
 
-export interface ApiErrorPayload {
-  code: string;
+export type AppErrorDetails = Record<string, unknown> | string | undefined;
+
+export interface AppErrorOptions {
   message: string;
-  status?: number;
-  details?: unknown;
+  statusCode?: number;
+  code?: string;
+  details?: AppErrorDetails;
+  isOperational?: boolean;
 }
 
-export class ApiError extends Error {
+export class AppError extends Error {
+  public readonly statusCode: number;
   public readonly code: string;
-  public readonly status?: number;
-  public readonly details?: unknown;
+  public readonly details?: AppErrorDetails;
+  public readonly isOperational: boolean;
 
-  constructor({ code, message, status, details }: ApiErrorPayload) {
+  constructor({ message, statusCode = 500, code = ERROR_CODES.internal, details, isOperational }: AppErrorOptions) {
     super(message);
-    this.name = 'ApiError';
+    this.name = this.constructor.name;
+    this.statusCode = statusCode;
     this.code = code;
-    this.status = status;
     this.details = details;
+    this.isOperational = isOperational ?? statusCode < 500;
+
+    if (typeof Error.captureStackTrace === 'function') {
+      Error.captureStackTrace(this, this.constructor);
+    }
   }
 }
 
-function extractErrorPayload(error: unknown): ApiErrorPayload {
-  if (error instanceof ApiError) {
-    return {
-      code: error.code,
-      message: error.message,
-      status: error.status,
-      details: error.details
-    };
+export class BadRequestError extends AppError {
+  constructor(message: string, details?: AppErrorDetails) {
+    super({ message, statusCode: 400, code: ERROR_CODES.badRequest, details, isOperational: true });
+  }
+}
+
+export class ValidationError extends AppError {
+  constructor(message: string, details?: AppErrorDetails) {
+    super({ message, statusCode: 422, code: ERROR_CODES.validation, details, isOperational: true });
+  }
+}
+
+export class NotFoundError extends AppError {
+  constructor(message: string, details?: AppErrorDetails) {
+    super({ message, statusCode: 404, code: ERROR_CODES.notFound, details, isOperational: true });
+  }
+}
+
+export class ConfigurationError extends AppError {
+  constructor(message: string, details?: AppErrorDetails) {
+    super({ message, statusCode: 500, code: ERROR_CODES.configuration, details, isOperational: true });
+  }
+}
+
+export class ExternalServiceError extends AppError {
+  constructor(message: string, details?: AppErrorDetails, statusCode = 502) {
+    super({ message, statusCode, code: ERROR_CODES.externalService, details });
+  }
+}
+
+export function isAppError(error: unknown): error is AppError {
+  return error instanceof AppError;
+}
+
+function extractAxiosMessage(error: unknown): string | undefined {
+  if (!axios.isAxiosError(error)) {
+    return undefined;
   }
 
-  if (axios.isAxiosError(error)) {
-    const status = error.response?.status;
-    const fallbackMessage = error.message || 'Unexpected error contacting server.';
+  if (typeof error.response?.data === 'string') {
+    return error.response.data;
+  }
 
-    if (error.response?.data && typeof error.response.data === 'object') {
-      const payload = (error.response.data as { error?: unknown }).error;
+  const responseError = error.response?.data as
+    | { error?: { message?: string } | string }
+    | undefined;
 
-      if (
-        payload &&
-        typeof payload === 'object' &&
-        'message' in payload &&
-        typeof (payload as { message: unknown }).message === 'string'
-      ) {
-        const typedPayload = payload as { code?: string; message: string; details?: unknown };
-
-        return {
-          code: typeof typedPayload.code === 'string' ? typedPayload.code : 'server_error',
-          message: typedPayload.message,
-          status,
-          details: typedPayload.details
-        };
-      }
+  if (responseError?.error) {
+    if (typeof responseError.error === 'string') {
+      return responseError.error;
     }
+    if (typeof responseError.error.message === 'string') {
+      return responseError.error.message;
+    }
+  }
 
-    return {
-      code: status && status >= 500 ? 'server_error' : 'request_failed',
-      message: fallbackMessage,
-      status
-    };
+  return error.message;
+}
+
+export function toAppError(error: unknown): AppError {
+  if (error instanceof AppError) {
+    return error;
+  }
+
+  const axiosMessage = extractAxiosMessage(error);
+  if (axiosMessage) {
+    const status = axios.isAxiosError(error) ? error.response?.status : undefined;
+    return new ExternalServiceError(axiosMessage, { status });
   }
 
   if (error instanceof Error) {
-    return {
-      code: 'unexpected_error',
-      message: error.message
-    };
+    return new AppError({ message: error.message });
   }
 
-  return {
-    code: 'unexpected_error',
-    message: 'Unexpected error contacting server.'
-  };
-}
+  if (typeof error === 'string' && error.trim().length > 0) {
+    return new AppError({ message: error });
+  }
 
-export function toApiError(error: unknown): ApiError {
-  const payload = extractErrorPayload(error);
-  return new ApiError(payload);
+  try {
+    const stringified = JSON.stringify(error);
+    if (stringified && stringified !== '{}') {
+      return new AppError({ message: stringified });
+    }
+  } catch {
+    // ignore serialization errors
+  }
+
+  return new AppError({ message: APP_COPY.errors.unexpectedError });
 }
