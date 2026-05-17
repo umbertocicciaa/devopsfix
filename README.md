@@ -20,12 +20,6 @@ DevOpsFix is a modern fullstack application that leverages Large Language Models
 
 ## Architecture
 
-### Backend (Node.js + TypeScript + Express)
-- **Plugin Architecture**: Abstract interfaces for LLM providers and CI/CD parsers
-- **Provider Factory**: Manages LLM provider instances
-- **Parser Factory**: Manages CI/CD pipeline parsers
-- **RESTful API**: Clean API endpoints for analysis and configuration
-
 ### Frontend (React + TypeScript)
 - **Modern UI**: Clean, responsive interface built with React
 - **Real-time Feedback**: Instant validation and analysis results
@@ -36,29 +30,6 @@ DevOpsFix is a modern fullstack application that leverages Large Language Models
 
 ```
 devopsfix/
-├── backend/                  # Backend API server
-│   ├── src/
-│   │   ├── interfaces/      # Abstract interfaces for extensibility
-│   │   │   ├── LLMProvider.ts
-│   │   │   └── CICDParser.ts
-│   │   ├── providers/       # LLM provider implementations
-│   │   │   ├── ChatGPTProvider.ts
-│   │   │   ├── ClaudeProvider.ts
-│   │   │   └── GeminiProvider.ts
-│   │   ├── parsers/         # CI/CD parser implementations
-│   │   │   ├── GitHubActionsParser.ts
-│   │   │   ├── GitLabCIParser.ts
-│   │   │   └── JenkinsParser.ts
-│   │   ├── utils/           # Factory classes & utilities
-│   │   │   ├── ProviderFactory.ts
-│   │   │   ├── ParserFactory.ts
-│   │   │   └── RepositoryFetcher.ts  # Fetch from GitHub/GitLab/Bitbucket
-│   │   ├── routes/          # API routes
-│   │   │   └── analyze.ts
-│   │   └── server.ts        # Main server file
-│   ├── package.json
-│   └── tsconfig.json
-│
 ├── frontend/                 # React frontend
 │   ├── src/
 │   │   ├── components/      # React components
@@ -98,12 +69,6 @@ cd frontend
 npm install
 ```
 
-3. (Optional) Install backend dependencies if you plan to run the API server:
-```bash
-cd ../backend
-npm install
-```
-
 ### Running the Application
 
 #### Development Mode
@@ -123,14 +88,7 @@ npm run dev
 
 #### Production Mode
 
-1. Build the backend:
-```bash
-cd backend
-npm run build
-npm start
-```
-
-2. Build the frontend:
+1. Build the frontend:
 ```bash
 cd frontend
 npm run build
@@ -392,39 +350,6 @@ Get list of supported CI/CD platforms.
 
 Enter your LLM API keys directly in the frontend configuration panel. Keys are stored locally in your browser
 storage so the static build can call the LLM APIs without relying on environment variables.
-
-### Backend Environment Variables (Optional)
-
-If you run the backend API server for extension work, you can still provide API keys via a `.env` file in the
-`backend` directory:
-
-```env
-PORT=3001
-
-# LLM API Keys (set the providers you intend to call)
-OPENAI_API_KEY=your_openai_api_key_here
-ANTHROPIC_API_KEY=your_anthropic_api_key_here
-GOOGLE_API_KEY=your_google_api_key_here
-```
-
-Each provider has a sensible default model (`gpt-4o-mini`, `claude-3-sonnet-20240229`, `gemini-1.5-flash`). Override
-them per-request via the `config.model` field if needed.
-
-## Technology Stack
-
-- **Backend**: Node.js, TypeScript, Express, js-yaml
-- **Frontend**: React, TypeScript, Axios
-- **Architecture**: Plugin-based, Factory Pattern
-- **API**: RESTful
-
-## Future Enhancements
-
-- Add more CI/CD platforms (CircleCI, Azure Pipelines, etc.)
-- Add authentication and user management
-- Implement pipeline history and comparison
-- Add export functionality for analysis reports
-- Real-time collaboration features
-- Advanced caching and optimization
 
 ## Contributing
 
