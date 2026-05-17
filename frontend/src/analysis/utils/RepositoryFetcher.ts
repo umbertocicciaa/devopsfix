@@ -1,5 +1,14 @@
 import axios from 'axios';
-import { BadRequestError, ExternalServiceError, NotFoundError } from './AppError';
+import { APP_COPY } from '../../config/appCopy';
+import {
+  CICD_TYPES,
+  CICD_TYPE_IDS,
+  HTTP_HEADER_VALUES,
+  HTTP_HEADERS,
+  REPOSITORY_CONFIG,
+  REPOSITORY_PLATFORMS
+} from '../../config/appConfig';
+import { BadRequestError, ExternalServiceError, NotFoundError } from '../../services/errors';
 
 export interface RepositoryInfo {
   platform: string;
@@ -10,9 +19,6 @@ export interface RepositoryInfo {
 }
 
 export class RepositoryFetcher {
-  /**
-   * Normalize incoming URLs by trimming whitespace and removing query/hash fragments.
-   */
   private static sanitizeInputUrl(url: string): string {
     const trimmed = url.trim();
     const hashIndex = trimmed.indexOf('#');
@@ -21,23 +27,17 @@ export class RepositoryFetcher {
     return queryIndex !== -1 ? withoutHash.slice(0, queryIndex) : withoutHash;
   }
 
-  /**
-   * Decode a slash-separated path into human-readable form.
-   */
   private static decodePath(path: string): string {
     return path
       .split('/')
-      .map(segment => decodeURIComponent(segment))
+      .map((segment) => decodeURIComponent(segment))
       .join('/');
   }
 
-  /**
-   * Encode each segment of a slash-separated path to produce a safe URL path.
-   */
   private static encodePath(path: string): string {
     return path
       .split('/')
-      .map(segment => encodeURIComponent(segment))
+      .map((segment) => encodeURIComponent(segment))
       .join('/');
   }
 
@@ -45,17 +45,13 @@ export class RepositoryFetcher {
     return this.encodePath(ref);
   }
 
-  /**
-   * Parse a repository URL to extract platform, owner, repo, and file path
-   */
   static parseRepositoryUrl(url: string): RepositoryInfo | null {
     const sanitizedUrl = this.sanitizeInputUrl(url);
 
-    // GitHub: https://github.com/owner/repo/blob/branch/path/to/file
-    const githubMatch = sanitizedUrl.match(/github\.com\/([^\/]+)\/([^\/]+)\/blob\/([^\/]+)\/(.+)/);
+    const githubMatch = sanitizedUrl.match(/github\.com\/([^/]+)\/([^/]+)\/blob\/([^/]+)\/(.+)/);
     if (githubMatch) {
       return {
-        platform: 'github',
+        platform: REPOSITORY_PLATFORMS.github,
         owner: decodeURIComponent(githubMatch[1]),
         repo: decodeURIComponent(githubMatch[2]),
         branch: this.decodePath(githubMatch[3]),
@@ -63,11 +59,10 @@ export class RepositoryFetcher {
       };
     }
 
-    // GitLab: https://gitlab.com/owner/repo/-/blob/branch/path/to/file
-    const gitlabMatch = sanitizedUrl.match(/gitlab\.com\/([^\/]+)\/([^\/]+)\/-\/blob\/([^\/]+)\/(.+)/);
+    const gitlabMatch = sanitizedUrl.match(/gitlab\.com\/([^/]+)\/([^/]+)\/-\/blob\/([^/]+)\/(.+)/);
     if (gitlabMatch) {
       return {
-        platform: 'gitlab',
+        platform: REPOSITORY_PLATFORMS.gitlab,
         owner: decodeURIComponent(gitlabMatch[1]),
         repo: decodeURIComponent(gitlabMatch[2]),
         branch: this.decodePath(gitlabMatch[3]),
@@ -75,11 +70,10 @@ export class RepositoryFetcher {
       };
     }
 
-    // Bitbucket: https://bitbucket.org/owner/repo/src/branch/path/to/file
-    const bitbucketMatch = sanitizedUrl.match(/bitbucket\.org\/([^\/]+)\/([^\/]+)\/src\/([^\/]+)\/(.+)/);
+    const bitbucketMatch = sanitizedUrl.match(/bitbucket\.org\/([^/]+)\/([^/]+)\/src\/([^/]+)\/(.+)/);
     if (bitbucketMatch) {
       return {
-        platform: 'bitbucket',
+        platform: REPOSITORY_PLATFORMS.bitbucket,
         owner: decodeURIComponent(bitbucketMatch[1]),
         repo: decodeURIComponent(bitbucketMatch[2]),
         branch: this.decodePath(bitbucketMatch[3]),
@@ -90,91 +84,78 @@ export class RepositoryFetcher {
     return null;
   }
 
-  /**
-   * Detect CI/CD type from file path
-   */
   static detectCICDType(filePath: string): string | null {
     const normalizedPath = filePath.toLowerCase();
-    
-    if (normalizedPath.includes('.github/workflows/') || normalizedPath.endsWith('.yml') || normalizedPath.endsWith('.yaml')) {
-      return 'github-actions';
+    const githubActions = CICD_TYPES.find((type) => type.id === CICD_TYPE_IDS.githubActions);
+    const gitlab = CICD_TYPES.find((type) => type.id === CICD_TYPE_IDS.gitlabCi);
+    const jenkins = CICD_TYPES.find((type) => type.id === CICD_TYPE_IDS.jenkins);
+
+    if (githubActions?.filePathHints.some((hint) => normalizedPath.includes(hint))) {
+      return CICD_TYPE_IDS.githubActions;
     }
-    
-    if (normalizedPath === '.gitlab-ci.yml' || normalizedPath === 'gitlab-ci.yml') {
-      return 'gitlab-ci';
+
+    if (gitlab?.fileNameHints.some((hint) => normalizedPath === hint)) {
+      return CICD_TYPE_IDS.gitlabCi;
     }
-    
-    if (normalizedPath === 'jenkinsfile' || normalizedPath.endsWith('jenkinsfile')) {
-      return 'jenkins';
+
+    if (jenkins?.fileNameHints.some((hint) => normalizedPath.endsWith(hint))) {
+      return CICD_TYPE_IDS.jenkins;
     }
-    
-    // Default based on file extension
-    if (normalizedPath.endsWith('.yml') || normalizedPath.endsWith('.yaml')) {
-      return 'github-actions'; // Default assumption
+
+    if (githubActions?.defaultExtensions.some((extension) => normalizedPath.endsWith(extension))) {
+      return CICD_TYPE_IDS.githubActions;
     }
-    
+
     return null;
   }
 
-  /**
-   * Validate that the URL is safe and from a trusted platform
-   */
   private static validateUrl(url: string): void {
-    // Only allow HTTPS URLs
     if (!url.startsWith('https://')) {
-      throw new BadRequestError('Only HTTPS URLs are allowed for security reasons.', { url });
+      throw new BadRequestError(APP_COPY.errors.httpsOnly, { url });
     }
-
-    // Whitelist of allowed domains
-    const allowedDomains = [
-      'github.com',
-      'raw.githubusercontent.com',
-      'gitlab.com',
-      'bitbucket.org'
-    ];
 
     try {
       const urlObj = new URL(url);
       const domain = urlObj.hostname;
-      
-      if (!allowedDomains.includes(domain)) {
-        throw new BadRequestError('Domain not allowed. Only specific domains are supported.', {
+
+      if (
+        !REPOSITORY_CONFIG.allowedDomains.includes(
+          domain as (typeof REPOSITORY_CONFIG.allowedDomains)[number]
+        )
+      ) {
+        throw new BadRequestError(APP_COPY.errors.domainNotAllowed, {
           url,
           domain,
-          allowedDomains
+          allowedDomains: REPOSITORY_CONFIG.allowedDomains
         });
       }
     } catch (error) {
       if (error instanceof BadRequestError) {
         throw error;
       }
-      throw new BadRequestError('Invalid URL format.', { url });
+      throw new BadRequestError(APP_COPY.errors.invalidUrlFormat, { url });
     }
   }
 
-  /**
-   * Fetch file content from GitHub
-   */
   private static async fetchFromGitHub(info: RepositoryInfo): Promise<string> {
-    const branch = info.branch || 'main';
-    const rawUrl = `https://raw.githubusercontent.com/${encodeURIComponent(info.owner)}/${encodeURIComponent(info.repo)}/${this.encodeGitRef(branch)}/${this.encodePath(info.filePath)}`;
-    
-    // Validate URL before making request
+    const branch = info.branch || REPOSITORY_CONFIG.defaultBranch;
+    const rawUrl = `${REPOSITORY_CONFIG.githubRawBaseUrl}/${encodeURIComponent(info.owner)}/${encodeURIComponent(info.repo)}/${this.encodeGitRef(branch)}/${this.encodePath(info.filePath)}`;
+
     this.validateUrl(rawUrl);
-    
+
     try {
       const response = await axios.get(rawUrl, {
         headers: {
-          'Accept': 'application/vnd.github.v3.raw'
+          [HTTP_HEADERS.accept]: HTTP_HEADER_VALUES.githubRaw
         },
-        timeout: 10000, // 10 second timeout
-        maxRedirects: 0 // Don't follow redirects for security
+        timeout: REPOSITORY_CONFIG.requestTimeoutMs,
+        maxRedirects: REPOSITORY_CONFIG.maxRedirects
       });
       return response.data;
     } catch (error) {
       if (axios.isAxiosError(error)) {
         if (error.response?.status === 404) {
-          throw new NotFoundError('Pipeline file not found on GitHub.', {
+          throw new NotFoundError(APP_COPY.errors.githubNotFound, {
             owner: info.owner,
             repo: info.repo,
             path: info.filePath,
@@ -182,7 +163,7 @@ export class RepositoryFetcher {
           });
         }
 
-        throw new ExternalServiceError('GitHub pipeline fetch failed.', {
+        throw new ExternalServiceError(APP_COPY.errors.githubFetchFailed, {
           status: error.response?.status,
           owner: info.owner,
           repo: info.repo,
@@ -192,7 +173,7 @@ export class RepositoryFetcher {
         });
       }
 
-      throw new ExternalServiceError('Unexpected error while fetching from GitHub.', {
+      throw new ExternalServiceError(APP_COPY.errors.githubFetchUnexpected, {
         owner: info.owner,
         repo: info.repo,
         path: info.filePath,
@@ -201,28 +182,24 @@ export class RepositoryFetcher {
     }
   }
 
-  /**
-   * Fetch file content from GitLab
-   */
   private static async fetchFromGitLab(info: RepositoryInfo): Promise<string> {
-    const branch = info.branch || 'main';
+    const branch = info.branch || REPOSITORY_CONFIG.defaultBranch;
     const encodedPath = encodeURIComponent(info.filePath);
     const encodedProject = encodeURIComponent(`${info.owner}/${info.repo}`);
-    const apiUrl = `https://gitlab.com/api/v4/projects/${encodedProject}/repository/files/${encodedPath}/raw?ref=${branch}`;
-    
-    // Validate URL before making request
+    const apiUrl = `${REPOSITORY_CONFIG.gitlabApiBaseUrl}/projects/${encodedProject}/repository/files/${encodedPath}/raw?ref=${branch}`;
+
     this.validateUrl(apiUrl);
-    
+
     try {
       const response = await axios.get(apiUrl, {
-        timeout: 10000, // 10 second timeout
-        maxRedirects: 0 // Don't follow redirects for security
+        timeout: REPOSITORY_CONFIG.requestTimeoutMs,
+        maxRedirects: REPOSITORY_CONFIG.maxRedirects
       });
       return response.data;
     } catch (error) {
       if (axios.isAxiosError(error)) {
         if (error.response?.status === 404) {
-          throw new NotFoundError('Pipeline file not found on GitLab.', {
+          throw new NotFoundError(APP_COPY.errors.gitlabNotFound, {
             owner: info.owner,
             repo: info.repo,
             path: info.filePath,
@@ -230,7 +207,7 @@ export class RepositoryFetcher {
           });
         }
 
-        throw new ExternalServiceError('GitLab pipeline fetch failed.', {
+        throw new ExternalServiceError(APP_COPY.errors.gitlabFetchFailed, {
           status: error.response?.status,
           owner: info.owner,
           repo: info.repo,
@@ -240,7 +217,7 @@ export class RepositoryFetcher {
         });
       }
 
-      throw new ExternalServiceError('Unexpected error while fetching from GitLab.', {
+      throw new ExternalServiceError(APP_COPY.errors.gitlabFetchUnexpected, {
         owner: info.owner,
         repo: info.repo,
         path: info.filePath,
@@ -249,26 +226,22 @@ export class RepositoryFetcher {
     }
   }
 
-  /**
-   * Fetch file content from Bitbucket
-   */
   private static async fetchFromBitbucket(info: RepositoryInfo): Promise<string> {
-    const branch = info.branch || 'main';
-    const rawUrl = `https://bitbucket.org/${encodeURIComponent(info.owner)}/${encodeURIComponent(info.repo)}/raw/${this.encodeGitRef(branch)}/${this.encodePath(info.filePath)}`;
-    
-    // Validate URL before making request
+    const branch = info.branch || REPOSITORY_CONFIG.defaultBranch;
+    const rawUrl = `${REPOSITORY_CONFIG.bitbucketRawBaseUrl}/${encodeURIComponent(info.owner)}/${encodeURIComponent(info.repo)}/raw/${this.encodeGitRef(branch)}/${this.encodePath(info.filePath)}`;
+
     this.validateUrl(rawUrl);
-    
+
     try {
       const response = await axios.get(rawUrl, {
-        timeout: 10000, // 10 second timeout
-        maxRedirects: 0 // Don't follow redirects for security
+        timeout: REPOSITORY_CONFIG.requestTimeoutMs,
+        maxRedirects: REPOSITORY_CONFIG.maxRedirects
       });
       return response.data;
     } catch (error) {
       if (axios.isAxiosError(error)) {
         if (error.response?.status === 404) {
-          throw new NotFoundError('Pipeline file not found on Bitbucket.', {
+          throw new NotFoundError(APP_COPY.errors.bitbucketNotFound, {
             owner: info.owner,
             repo: info.repo,
             path: info.filePath,
@@ -276,7 +249,7 @@ export class RepositoryFetcher {
           });
         }
 
-        throw new ExternalServiceError('Bitbucket pipeline fetch failed.', {
+        throw new ExternalServiceError(APP_COPY.errors.bitbucketFetchFailed, {
           status: error.response?.status,
           owner: info.owner,
           repo: info.repo,
@@ -286,7 +259,7 @@ export class RepositoryFetcher {
         });
       }
 
-      throw new ExternalServiceError('Unexpected error while fetching from Bitbucket.', {
+      throw new ExternalServiceError(APP_COPY.errors.bitbucketFetchUnexpected, {
         owner: info.owner,
         repo: info.repo,
         path: info.filePath,
@@ -295,36 +268,31 @@ export class RepositoryFetcher {
     }
   }
 
-  /**
-   * Fetch pipeline configuration from a repository URL
-   */
   static async fetchPipeline(url: string): Promise<{ content: string; detectedCICDType: string | null }> {
     const repoInfo = this.parseRepositoryUrl(url);
-    
+
     if (!repoInfo) {
-      throw new BadRequestError('Invalid repository URL. Supported platforms: GitHub, GitLab, Bitbucket.', { url });
+      throw new BadRequestError(APP_COPY.errors.invalidRepositoryUrl, { url });
     }
 
     let content: string;
-    
+
     switch (repoInfo.platform) {
-      case 'github':
+      case REPOSITORY_PLATFORMS.github:
         content = await this.fetchFromGitHub(repoInfo);
         break;
-      case 'gitlab':
+      case REPOSITORY_PLATFORMS.gitlab:
         content = await this.fetchFromGitLab(repoInfo);
         break;
-      case 'bitbucket':
+      case REPOSITORY_PLATFORMS.bitbucket:
         content = await this.fetchFromBitbucket(repoInfo);
         break;
       default:
-        throw new BadRequestError('Unsupported source control platform.', {
-          platform: repoInfo.platform
-        });
+        throw new BadRequestError(APP_COPY.errors.invalidRepositoryUrl, { platform: repoInfo.platform });
     }
 
     const detectedCICDType = this.detectCICDType(repoInfo.filePath);
-    
+
     return {
       content,
       detectedCICDType

@@ -1,4 +1,5 @@
 import React from 'react';
+import { APP_COPY } from '../config/appCopy';
 import { AnalysisResponse } from '../types';
 
 interface ResultsDisplayProps {
@@ -29,21 +30,24 @@ export const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ results }) => {
 
   return (
     <div className="results-display" style={{ marginTop: '30px' }}>
-      <h2>Analysis Results</h2>
+      <h2>{APP_COPY.results.title}</h2>
       
       <div style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
-        <h3>Provider: {results.provider}</h3>
+        <h3>
+          {APP_COPY.labels.provider}: {results.provider}
+        </h3>
       </div>
 
       {/* Validation Results */}
       <div style={{ marginBottom: '20px', padding: '15px', border: '1px solid #ddd', borderRadius: '4px' }}>
-        <h3>Validation</h3>
+        <h3>{APP_COPY.results.validationTitle}</h3>
         <p style={{ color: results.validation.valid ? 'green' : 'red', fontWeight: 'bold' }}>
-          Status: {results.validation.valid ? '✓ Valid' : '✗ Invalid'}
+          {APP_COPY.results.validationStatusLabel}:{' '}
+          {results.validation.valid ? APP_COPY.results.validationValid : APP_COPY.results.validationInvalid}
         </p>
         {results.validation.errors.length > 0 && (
           <div>
-            <h4>Errors:</h4>
+            <h4>{APP_COPY.results.validationErrorsTitle}</h4>
             <ul>
               {results.validation.errors.map((error, index) => (
                 <li key={index} style={{ color: 'red' }}>{error}</li>
@@ -55,21 +59,28 @@ export const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ results }) => {
 
       {/* Pipeline Structure */}
       <div style={{ marginBottom: '20px', padding: '15px', border: '1px solid #ddd', borderRadius: '4px' }}>
-        <h3>Pipeline Structure</h3>
-        <p><strong>Type:</strong> {results.parsed.type}</p>
-        <p><strong>Stages:</strong> {results.parsed.stages.join(', ') || 'None found'}</p>
-        <p><strong>Jobs Count:</strong> {results.parsed.jobs.length}</p>
+        <h3>{APP_COPY.results.pipelineStructureTitle}</h3>
+        <p>
+          <strong>{APP_COPY.results.pipelineTypeLabel}:</strong> {results.parsed.type}
+        </p>
+        <p>
+          <strong>{APP_COPY.results.pipelineStagesLabel}:</strong>{' '}
+          {results.parsed.stages.join(', ') || APP_COPY.results.pipelineStagesEmpty}
+        </p>
+        <p>
+          <strong>{APP_COPY.results.pipelineJobsLabel}:</strong> {results.parsed.jobs.length}
+        </p>
       </div>
 
       {/* LLM Analysis */}
       <div style={{ marginBottom: '20px', padding: '15px', border: '1px solid #ddd', borderRadius: '4px' }}>
-        <h3>AI Analysis</h3>
+        <h3>{APP_COPY.results.analysisTitle}</h3>
         <p>{results.analysis.analysis}</p>
       </div>
 
       {/* Suggestions */}
       <div style={{ marginBottom: '20px', padding: '15px', border: '1px solid #ddd', borderRadius: '4px' }}>
-        <h3>Suggestions for Improvement</h3>
+        <h3>{APP_COPY.results.suggestionsTitle}</h3>
         <ul>
           {results.analysis.suggestions.map((suggestion, index) => (
             <li key={index} style={{ marginBottom: '8px' }}>{suggestion}</li>
@@ -79,7 +90,7 @@ export const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ results }) => {
 
       {/* Fixes */}
       <div style={{ marginBottom: '20px', padding: '15px', border: '1px solid #ddd', borderRadius: '4px', backgroundColor: '#e7f3ff' }}>
-        <h3>Recommended Fixes</h3>
+        <h3>{APP_COPY.results.fixesTitle}</h3>
         <p>{results.analysis.fixes}</p>
       </div>
 
@@ -96,9 +107,9 @@ export const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ results }) => {
           }}
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <h3 style={{ marginBottom: 0 }}>Pipeline Comparison</h3>
+            <h3 style={{ marginBottom: 0 }}>{APP_COPY.results.comparisonTitle}</h3>
             <p style={{ margin: 0, color: '#5f6368', fontSize: '14px' }}>
-              Review the AI-enhanced pipeline next to your original configuration. Changed lines are highlighted.
+              {APP_COPY.results.comparisonSubtitle}
             </p>
             <span
               style={{
@@ -108,8 +119,8 @@ export const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ results }) => {
               }}
             >
               {hasChanges
-                ? 'Updates in green indicate the AI-generated improvements; the original differences are shown in coral.'
-                : 'No differences detected — the AI recommended keeping your pipeline as-is.'}
+                ? APP_COPY.results.comparisonChangesNote
+                : APP_COPY.results.comparisonNoChangesNote}
             </span>
           </div>
 
@@ -138,7 +149,7 @@ export const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ results }) => {
                   fontSize: '14px'
                 }}
               >
-                Original Pipeline
+                {APP_COPY.results.comparisonOriginalTitle}
               </div>
               <div
                 style={{
@@ -190,7 +201,7 @@ export const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ results }) => {
                   color: '#1b5e20'
                 }}
               >
-                AI Improved Pipeline
+                {APP_COPY.results.comparisonImprovedTitle}
               </div>
               <div
                 style={{
@@ -237,8 +248,7 @@ export const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ results }) => {
             fontSize: '14px'
           }}
         >
-          Pipeline comparison is unavailable because the server did not return the original or improved pipeline
-          content.
+          {APP_COPY.results.comparisonUnavailable}
         </div>
       )}
     </div>

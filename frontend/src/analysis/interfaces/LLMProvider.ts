@@ -1,16 +1,5 @@
-export interface LLMProviderConfig {
-  apiKey?: string;
-  model?: string;
-  temperature?: number;
-  maxTokens?: number;
-}
-
-export interface LLMResponse {
-  suggestions: string[];
-  analysis: string;
-  fixes: string;
-  improvedPipeline?: string;
-}
+import { APP_COPY } from '../../config/appCopy';
+import type { LLMAnalysis, LLMProviderConfig } from '../../types';
 
 export abstract class LLMProvider {
   protected config: LLMProviderConfig;
@@ -19,45 +8,28 @@ export abstract class LLMProvider {
     this.config = config;
   }
 
-  /**
-   * Builds a consistent system/user prompt pair to guide LLMs.
-   * Subclasses can extend/override if they need provider-specific tuning.
-   */
   protected buildPromptParts(
     pipelineContent: string,
     cicdType: string
   ): { systemPrompt: string; userPrompt: string } {
-    const systemPrompt = [
-      'You are a senior DevOps engineer who reviews CI/CD pipelines.',
-      'Respond with clear, actionable guidance that prioritizes reliability, security, and performance.',
-      'Always return a single JSON object with the following shape:',
-      '{ "analysis": string, "suggestions": string[ ], "fixes": string, "improvedPipeline": string }.',
-      'Keep suggestions concise and focused on highest-impact improvements.',
-      'The improvedPipeline value must contain the full pipeline rewritten with the recommended fixes applied. If no changes are required, repeat the original pipeline content.',
-      'If information is missing, explain what is needed instead of guessing.',
-      'Do not include Markdown, code fences, or additional commentary outside the JSON object.'
-    ].join(' ');
-
+    const systemPrompt = APP_COPY.prompts.systemLines.join(' ');
     const userPrompt = [
-      `CI/CD platform: ${cicdType}`,
-      'Task: Analyze the pipeline configuration. Highlight risks, gaps, and best-practice deviations.',
-      'Return prioritized suggestions (at least three when possible) and summarize the most critical fixes.',
-      'Produce a complete improvedPipeline string that reflects all recommended fixes applied to the original configuration.',
-      'Pipeline configuration:',
+      `${APP_COPY.prompts.userLines[0]} ${cicdType}`,
+      ...APP_COPY.prompts.userLines.slice(1),
       pipelineContent
     ].join('\n\n');
 
     return { systemPrompt, userPrompt };
   }
 
-  protected parseLLMResponse(rawText: string): LLMResponse {
+  protected parseLLMResponse(rawText: string): LLMAnalysis {
     const trimmed = (rawText || '').trim();
 
     if (!trimmed) {
       return {
-        analysis: 'The LLM returned an empty response.',
+        analysis: APP_COPY.errors.llmEmptyResponse,
         suggestions: [],
-        fixes: 'No fixes provided.'
+        fixes: APP_COPY.errors.llmNoFixes
       };
     }
 
@@ -92,12 +64,12 @@ export abstract class LLMProvider {
     return {
       analysis: trimmed,
       suggestions: [],
-      fixes: 'Refer to the analysis for remediation guidance.'
+      fixes: APP_COPY.errors.llmFallbackFixes
     };
   }
 
   abstract getName(): string;
-  abstract analyzePipeline(pipelineContent: string, cicdType: string): Promise<LLMResponse>;
+  abstract analyzePipeline(pipelineContent: string, cicdType: string): Promise<LLMAnalysis>;
 }
 
 function tryParseJsonObject(text: string): Record<string, unknown> | null {
@@ -112,8 +84,10 @@ function tryParseJsonObject(text: string): Record<string, unknown> | null {
     candidates.push(cleaned);
   }
 
-  for (const match of cleaned.matchAll(/```(?:json)?\s*([\s\S]*?)```/gi)) {
-    const candidate = match[1]?.trim();
+  const fencedRegex = /```(?:json)?\s*([\s\S]*?)```/gi;
+  let matchResult: RegExpExecArray | null;
+  while ((matchResult = fencedRegex.exec(cleaned)) !== null) {
+    const candidate = matchResult[1]?.trim();
     if (candidate) {
       candidates.push(candidate);
     }
@@ -158,7 +132,7 @@ function normalizeSuggestions(value: unknown): string[] {
   if (typeof value === 'string' && value.trim()) {
     return value
       .split(/\r?\n+/)
-      .map((line) => line.replace(/^[\-\*\d\.\)\s]+/, '').trim())
+      .map((line) => line.replace(/^[*\d.)\s-]+/, '').trim())
       .filter((line) => line.length > 0);
   }
 

@@ -1,9 +1,4 @@
-export interface ParsedPipeline {
-  type: string;
-  stages: string[];
-  jobs: any[];
-  issues: string[];
-}
+import type { ParsedPipeline } from '../../types';
 
 export abstract class CICDParser {
   abstract getName(): string;

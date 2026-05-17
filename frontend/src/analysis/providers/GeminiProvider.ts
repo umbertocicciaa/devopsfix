@@ -1,34 +1,41 @@
 import axios from 'axios';
-import { LLMProvider, LLMProviderConfig, LLMResponse } from '../interfaces/LLMProvider';
-import { ConfigurationError, ExternalServiceError } from '../utils/AppError';
+import { APP_COPY } from '../../config/appCopy';
+import {
+  HTTP_HEADER_VALUES,
+  HTTP_HEADERS,
+  LLM_DEFAULTS,
+  LLM_ENDPOINTS,
+  LLM_PROVIDER_IDS,
+  LLM_PROVIDERS
+} from '../../config/appConfig';
+import type { LLMAnalysis } from '../../types';
+import { ConfigurationError, ExternalServiceError } from '../../services/errors';
+import { LLMProvider } from '../interfaces/LLMProvider';
+
+const providerMetadata = LLM_PROVIDERS.find((provider) => provider.id === LLM_PROVIDER_IDS.gemini)!;
+const providerLabel = providerMetadata.label;
+const defaultModel = providerMetadata.defaultModel;
 
 export class GeminiProvider extends LLMProvider {
-  constructor(config: LLMProviderConfig) {
-    super(config);
-  }
-
   getName(): string {
-    return 'Gemini';
+    return providerLabel;
   }
 
-  async analyzePipeline(pipelineContent: string, cicdType: string): Promise<LLMResponse> {
-    const apiKey = this.config.apiKey || process.env.GOOGLE_API_KEY;
+  async analyzePipeline(pipelineContent: string, cicdType: string): Promise<LLMAnalysis> {
+    const apiKey = this.config.apiKey;
 
     if (!apiKey) {
-      throw new ConfigurationError('Google Gemini API key is required. Provide config.apiKey or set GOOGLE_API_KEY.', {
-        provider: 'gemini',
-        environmentVariable: 'GOOGLE_API_KEY'
-      });
+      throw new ConfigurationError(APP_COPY.errors.missingApiKey, { provider: LLM_PROVIDER_IDS.gemini });
     }
 
-    const model = this.config.model || 'gemini-1.5-flash';
-    const temperature = this.config.temperature ?? 0.2;
-    const maxTokens = this.config.maxTokens ?? 900;
+    const model = this.config.model || defaultModel;
+    const temperature = this.config.temperature ?? LLM_DEFAULTS.temperature;
+    const maxTokens = this.config.maxTokens ?? LLM_DEFAULTS.maxTokens;
     const { systemPrompt, userPrompt } = this.buildPromptParts(pipelineContent, cicdType);
 
     try {
       const response = await axios.post(
-        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+        `${LLM_ENDPOINTS.geminiModels}/${model}:generateContent?key=${apiKey}`,
         {
           contents: [
             {
@@ -44,13 +51,13 @@ export class GeminiProvider extends LLMProvider {
             temperature,
             maxOutputTokens: maxTokens
           },
-          responseMimeType: 'application/json'
+          responseMimeType: HTTP_HEADER_VALUES.json
         },
         {
           headers: {
-            'Content-Type': 'application/json'
+            [HTTP_HEADERS.contentType]: HTTP_HEADER_VALUES.json
           },
-          timeout: 30000
+          timeout: LLM_DEFAULTS.requestTimeoutMs
         }
       );
 
@@ -80,7 +87,9 @@ export class GeminiProvider extends LLMProvider {
         .trim();
 
       if (!content) {
-        throw new ExternalServiceError('Gemini API returned an empty response.', { provider: 'gemini' });
+        throw new ExternalServiceError(APP_COPY.errors.geminiEmptyResponse, {
+          provider: LLM_PROVIDER_IDS.gemini
+        });
       }
 
       return this.parseLLMResponse(content);
@@ -92,9 +101,9 @@ export class GeminiProvider extends LLMProvider {
           error.response?.data?.error ||
           error.message;
         throw new ExternalServiceError(
-          `Gemini API request failed${status ? ` (status ${status})` : ''}.`,
+          `${APP_COPY.errors.geminiRequestFailed}${status ? ` (status ${status})` : ''}.`,
           {
-            provider: 'gemini',
+            provider: LLM_PROVIDER_IDS.gemini,
             status,
             message,
             isTimeout: error.code === 'ECONNABORTED'
@@ -102,8 +111,8 @@ export class GeminiProvider extends LLMProvider {
         );
       }
 
-      throw new ExternalServiceError('Unexpected error while communicating with Gemini.', {
-        provider: 'gemini',
+      throw new ExternalServiceError(APP_COPY.errors.geminiUnexpected, {
+        provider: LLM_PROVIDER_IDS.gemini,
         message: error instanceof Error ? error.message : String(error)
       });
     }

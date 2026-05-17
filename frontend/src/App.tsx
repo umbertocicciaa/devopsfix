@@ -1,59 +1,77 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import './App.css';
 import { PipelineInput } from './components/PipelineInput';
 import { ConfigurationPanel } from './components/ConfigurationPanel';
 import { ResultsDisplay } from './components/ResultsDisplay';
-import { api } from './services/api';
+import { APP_COPY } from './config/appCopy';
+import {
+  CICD_TYPES,
+  INPUT_MODES,
+  LLM_PROVIDERS,
+  type CICDTypeId,
+  type InputMode,
+  type LLMProviderId
+} from './config/appConfig';
+import { analyzePipeline } from './services/analysisService';
+import { AppError, toAppError } from './services/errors';
+import { clearStoredApiKey, getStoredApiKey, setStoredApiKey } from './services/storage';
 import { AnalysisResponse } from './types';
-import { ApiError, toApiError } from './services/errors';
 
 function App() {
   const [pipelineContent, setPipelineContent] = useState('');
   const [repositoryUrl, setRepositoryUrl] = useState('');
-  const [inputMode, setInputMode] = useState<'manual' | 'repository'>('repository');
-  const [cicdType, setCICDType] = useState('');
-  const [llmProvider, setLLMProvider] = useState('');
+  const [inputMode, setInputMode] = useState<InputMode>(INPUT_MODES.repository);
+  const [cicdType, setCICDType] = useState<CICDTypeId>(CICD_TYPES[0].id);
+  const [llmProvider, setLLMProvider] = useState<LLMProviderId>(LLM_PROVIDERS[0].id);
+  const [apiKey, setApiKey] = useState<string>(() => getStoredApiKey(LLM_PROVIDERS[0].id));
   const [results, setResults] = useState<AnalysisResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleAnalyze = async () => {
-    // Validate input based on mode
-    if (inputMode === 'manual' && !pipelineContent.trim()) {
-      setError('Please enter pipeline configuration');
-      return;
-    }
-    
-    if (inputMode === 'repository' && !repositoryUrl.trim()) {
-      setError('Please enter a repository URL');
-      return;
-    }
+  useEffect(() => {
+    setApiKey(getStoredApiKey(llmProvider));
+  }, [llmProvider]);
 
+  const handleApiKeyChange = (value: string) => {
+    setApiKey(value);
+    setStoredApiKey(llmProvider, value);
+  };
+
+  const handleApiKeyClear = () => {
+    clearStoredApiKey(llmProvider);
+    setApiKey('');
+  };
+
+  const handleAnalyze = async () => {
     setLoading(true);
     setError(null);
     setResults(null);
 
     try {
-      const response = await api.analyzePipeline({
-        pipelineContent: inputMode === 'manual' ? pipelineContent : undefined,
-        repositoryUrl: inputMode === 'repository' ? repositoryUrl : undefined,
+      const response = await analyzePipeline({
+        pipelineContent: inputMode === INPUT_MODES.manual ? pipelineContent : undefined,
+        repositoryUrl: inputMode === INPUT_MODES.repository ? repositoryUrl : undefined,
         cicdType,
-        llmProvider
+        llmProvider,
+        inputMode,
+        config: {
+          apiKey
+        }
       });
       setResults(response);
       
       // If CI/CD type was auto-detected, update the state
-      if (response.detectedCICDType && inputMode === 'repository') {
-        setCICDType(response.detectedCICDType);
+      if (response.detectedCICDType && inputMode === INPUT_MODES.repository) {
+        setCICDType(response.detectedCICDType as CICDTypeId);
       }
     } catch (err) {
-      const apiError = err instanceof ApiError ? err : toApiError(err);
+      const apiError = err instanceof AppError ? err : toAppError(err);
       let detailsNote: string | null = null;
 
       if (apiError.details && typeof apiError.details === 'object') {
         const details = apiError.details as { missing?: unknown };
         if (Array.isArray(details.missing) && details.missing.length > 0) {
-          detailsNote = `Missing: ${details.missing.join(', ')}`;
+          detailsNote = `${APP_COPY.labels.missingPrefix}: ${details.missing.join(', ')}`;
         }
       }
 
@@ -72,8 +90,8 @@ function App() {
         color: 'white',
         marginBottom: '30px'
       }}>
-        <h1>DevOpsFix - CI/CD Pipeline Analyzer</h1>
-        <p>Analyze and improve your CI/CD pipelines using AI</p>
+        <h1>{APP_COPY.app.title}</h1>
+        <p>{APP_COPY.app.subtitle}</p>
       </header>
 
       <div style={{ 
@@ -101,8 +119,11 @@ function App() {
             <ConfigurationPanel
               cicdType={cicdType}
               llmProvider={llmProvider}
+              apiKey={apiKey}
               onCICDTypeChange={setCICDType}
               onLLMProviderChange={setLLMProvider}
+              onApiKeyChange={handleApiKeyChange}
+              onApiKeyClear={handleApiKeyClear}
             />
             <button
               onClick={handleAnalyze}
@@ -120,7 +141,7 @@ function App() {
                 marginTop: '20px'
               }}
             >
-              {loading ? 'Analyzing...' : 'Analyze Pipeline'}
+              {loading ? APP_COPY.actions.analyzing : APP_COPY.actions.analyze}
             </button>
           </div>
         </div>
@@ -133,7 +154,7 @@ function App() {
             borderRadius: '4px',
             marginBottom: '20px'
           }}>
-            <strong>Error:</strong> {error}
+            <strong>{APP_COPY.labels.error}:</strong> {error}
           </div>
         )}
 
