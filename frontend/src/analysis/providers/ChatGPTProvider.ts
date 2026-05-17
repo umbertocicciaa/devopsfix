@@ -33,6 +33,7 @@ export class ChatGPTProvider extends LLMProvider {
     const maxTokens = this.config.maxTokens ?? LLM_DEFAULTS.maxTokens;
     const { systemPrompt, userPrompt } = this.buildPromptParts(pipelineContent, cicdType);
 
+    // https://developers.openai.com/api/reference/overview
     try {
       const response = await axios.post(
         LLM_ENDPOINTS.openaiChat,
@@ -48,7 +49,6 @@ export class ChatGPTProvider extends LLMProvider {
         {
           headers: {
             [HTTP_HEADERS.authorization]: `${apiKey}`,
-            [HTTP_HEADERS.contentType]: HTTP_HEADER_VALUES.json
           },
           timeout: LLM_DEFAULTS.requestTimeoutMs
         }
