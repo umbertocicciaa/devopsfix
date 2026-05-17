@@ -6,10 +6,8 @@ on:
       environment:
         description: "Target environment"
         required: true
-        default: "production"
-        type: choice
-        options:
-          - production
+        default: "github-pages"
+  
   push:
     branches:
       - main
@@ -73,10 +71,10 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     environment:
-      name: ${{ github.event.inputs.environment || 'production' }}
+      name: ${{ github.event.inputs.environment || 'github-pages' }}
     steps:
       - name: Approval granted – proceeding to deploy
-        run: echo "Deployment approved for ${{ github.event.inputs.environment || 'production' }}"
+        run: echo "Deployment approved for ${{ github.event.inputs.environment || 'github-pages' }}"
 
   deploy:
     name: Deploy to GitHub Pages
@@ -84,7 +82,7 @@ jobs:
     runs-on: ubuntu-latest
 
     environment:
-      name: ${{ github.event.inputs.environment || 'production' }}
+      name: ${{ github.event.inputs.environment || 'github-pages' }}
       url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
