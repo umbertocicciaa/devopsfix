@@ -115,7 +115,7 @@ export const REPOSITORY_CONFIG = {
 } as const;
 
 export const HTTP_HEADERS = {
-  authorization: 'Authorization',
+  authorization: 'Authorization: Bearer',
   contentType: 'Content-Type',
   accept: 'Accept',
   apiKey: 'x-api-key',

@@ -47,7 +47,7 @@ export class ChatGPTProvider extends LLMProvider {
         },
         {
           headers: {
-            [HTTP_HEADERS.authorization]: `Bearer ${apiKey}`,
+            [HTTP_HEADERS.authorization]: `${apiKey}`,
             [HTTP_HEADERS.contentType]: HTTP_HEADER_VALUES.json
           },
           timeout: LLM_DEFAULTS.requestTimeoutMs
