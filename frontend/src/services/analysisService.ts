@@ -1,5 +1,5 @@
 import { APP_COPY } from '../config/appCopy';
-import { ANALYSIS_FIELDS, INPUT_MODES } from '../config/appConfig';
+import { ANALYSIS_FIELDS, INPUT_MODES, type CICDTypeId } from '../config/appConfig';
 import type { AnalysisRequest, AnalysisResponse } from '../types';
 import { ParserFactory } from '../analysis/utils/ParserFactory';
 import { ProviderFactory } from '../analysis/utils/ProviderFactory';
@@ -64,12 +64,13 @@ export const analyzePipeline = async (request: AnalysisRequest): Promise<Analysi
     throw new ValidationError(APP_COPY.errors.missingProvider);
   }
 
-  const parser = ParserFactory.getParser(normalizedCicdType);
+  const resolvedCicdType = normalizedCicdType as CICDTypeId;
+  const parser = ParserFactory.getParser(resolvedCicdType);
   const parsedPipeline = parser.parse(normalizedPipelineContent);
   const validation = parser.validate(normalizedPipelineContent);
 
   const provider = ProviderFactory.getProvider(llmProvider, normalizedConfig || {});
-  const analysis = await provider.analyzePipeline(normalizedPipelineContent, normalizedCicdType);
+  const analysis = await provider.analyzePipeline(normalizedPipelineContent, resolvedCicdType);
 
   const improvedPipeline =
     analysis.improvedPipeline && analysis.improvedPipeline.trim().length > 0
@@ -86,6 +87,6 @@ export const analyzePipeline = async (request: AnalysisRequest): Promise<Analysi
     },
     provider: provider.getName(),
     originalPipeline: normalizedPipelineContent,
-    detectedCICDType: usingRepository ? normalizedCicdType : undefined
+    detectedCICDType: usingRepository ? resolvedCicdType : undefined
   };
 };

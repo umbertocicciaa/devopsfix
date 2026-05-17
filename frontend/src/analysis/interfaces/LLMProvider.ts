@@ -84,8 +84,10 @@ function tryParseJsonObject(text: string): Record<string, unknown> | null {
     candidates.push(cleaned);
   }
 
-  for (const match of cleaned.matchAll(/```(?:json)?\s*([\s\S]*?)```/gi)) {
-    const candidate = match[1]?.trim();
+  const fencedRegex = /```(?:json)?\s*([\s\S]*?)```/gi;
+  let matchResult: RegExpExecArray | null;
+  while ((matchResult = fencedRegex.exec(cleaned)) !== null) {
+    const candidate = matchResult[1]?.trim();
     if (candidate) {
       candidates.push(candidate);
     }
@@ -130,7 +132,7 @@ function normalizeSuggestions(value: unknown): string[] {
   if (typeof value === 'string' && value.trim()) {
     return value
       .split(/\r?\n+/)
-      .map((line) => line.replace(/^[\-\*\d\.\)\s]+/, '').trim())
+      .map((line) => line.replace(/^[*\d.)\s-]+/, '').trim())
       .filter((line) => line.length > 0);
   }
 

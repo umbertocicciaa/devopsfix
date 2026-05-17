@@ -17,16 +17,18 @@ export class JenkinsParser extends CICDParser {
       const stages: string[] = [];
       const jobs: any[] = [];
 
-      const stageMatches = content.matchAll(/stage\(['"](.+?)['"]\)/g);
-      for (const match of stageMatches) {
-        stages.push(match[1]);
+      const stageRegex = /stage\(['"](.+?)['"]\)/g;
+      let stageMatch: RegExpExecArray | null;
+      while ((stageMatch = stageRegex.exec(content)) !== null) {
+        stages.push(stageMatch[1]);
       }
 
-      const stepsMatches = content.matchAll(/stage\(['"](.+?)['"]\)\s*\{([^}]+)\}/gs);
-      for (const match of stepsMatches) {
+      const stepsRegex = /stage\(['"](.+?)['"]\)\s*\{([^}]+)\}/gs;
+      let stepsMatch: RegExpExecArray | null;
+      while ((stepsMatch = stepsRegex.exec(content)) !== null) {
         jobs.push({
-          name: match[1],
-          content: match[2].trim()
+          name: stepsMatch[1],
+          content: stepsMatch[2].trim()
         });
       }
 

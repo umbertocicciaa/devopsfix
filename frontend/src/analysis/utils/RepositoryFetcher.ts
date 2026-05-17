@@ -48,7 +48,7 @@ export class RepositoryFetcher {
   static parseRepositoryUrl(url: string): RepositoryInfo | null {
     const sanitizedUrl = this.sanitizeInputUrl(url);
 
-    const githubMatch = sanitizedUrl.match(/github\.com\/([^\/]+)\/([^\/]+)\/blob\/([^\/]+)\/(.+)/);
+    const githubMatch = sanitizedUrl.match(/github\.com\/([^/]+)\/([^/]+)\/blob\/([^/]+)\/(.+)/);
     if (githubMatch) {
       return {
         platform: REPOSITORY_PLATFORMS.github,
@@ -59,7 +59,7 @@ export class RepositoryFetcher {
       };
     }
 
-    const gitlabMatch = sanitizedUrl.match(/gitlab\.com\/([^\/]+)\/([^\/]+)\/-\/blob\/([^\/]+)\/(.+)/);
+    const gitlabMatch = sanitizedUrl.match(/gitlab\.com\/([^/]+)\/([^/]+)\/-\/blob\/([^/]+)\/(.+)/);
     if (gitlabMatch) {
       return {
         platform: REPOSITORY_PLATFORMS.gitlab,
@@ -70,7 +70,7 @@ export class RepositoryFetcher {
       };
     }
 
-    const bitbucketMatch = sanitizedUrl.match(/bitbucket\.org\/([^\/]+)\/([^\/]+)\/src\/([^\/]+)\/(.+)/);
+    const bitbucketMatch = sanitizedUrl.match(/bitbucket\.org\/([^/]+)\/([^/]+)\/src\/([^/]+)\/(.+)/);
     if (bitbucketMatch) {
       return {
         platform: REPOSITORY_PLATFORMS.bitbucket,
@@ -118,7 +118,11 @@ export class RepositoryFetcher {
       const urlObj = new URL(url);
       const domain = urlObj.hostname;
 
-      if (!REPOSITORY_CONFIG.allowedDomains.includes(domain)) {
+      if (
+        !REPOSITORY_CONFIG.allowedDomains.includes(
+          domain as (typeof REPOSITORY_CONFIG.allowedDomains)[number]
+        )
+      ) {
         throw new BadRequestError(APP_COPY.errors.domainNotAllowed, {
           url,
           domain,
