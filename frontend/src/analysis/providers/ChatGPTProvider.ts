@@ -1,7 +1,6 @@
 import axios from 'axios';
 import { APP_COPY } from '../../config/appCopy';
 import {
-  HTTP_HEADER_VALUES,
   HTTP_HEADERS,
   LLM_DEFAULTS,
   LLM_ENDPOINTS,
