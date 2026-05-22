@@ -2,9 +2,8 @@
 
 DevOpsFix is a modern fullstack application that leverages Large Language Models (LLMs) to analyze, fix, and improve CI/CD pipelines. Built with extensibility in mind, it supports multiple CI/CD platforms and LLM providers, with the ability to easily add more as they emerge.
 
-![Output examples](static/examples-1.png)
-![Output examples](static/examples-2.png)
-![Output examples](static/examples-3.png)
+
+This project can be considered a personal toy, so it should not be taken seriously for a production environment :)
 
 ## Features
 
@@ -20,7 +19,7 @@ DevOpsFix is a modern fullstack application that leverages Large Language Models
 
 ## Architecture
 
-### Frontend (React + TypeScript)
+### Frontend
 - **Modern UI**: Clean, responsive interface built with React
 - **Real-time Feedback**: Instant validation and analysis results
 - **Configuration Panel**: Easy selection of CI/CD platform and LLM provider, plus local API key storage
