@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { APP_COPY } from '../config/appCopy';
 import { CICD_TYPES, LLM_PROVIDERS, type CICDTypeId, type LLMProviderId } from '../config/appConfig';
+import { SecuritySettings } from './SecuritySettings';
+import { SecurityWarning } from './SecurityWarning';
 
 interface ConfigurationPanelProps {
   cicdType: CICDTypeId;
@@ -126,6 +128,8 @@ export const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
             {APP_COPY.configuration.apiKeyClear}
           </button>
         </div>
+        <SecuritySettings />
+        <SecurityWarning />
       </div>
     </div>
   );

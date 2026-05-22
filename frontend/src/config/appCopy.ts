@@ -40,7 +40,7 @@ export const APP_COPY = {
     providerLabel: 'LLM Provider',
     apiKeyLabel: 'API Key',
     apiKeyPlaceholder: 'Enter your API key',
-    apiKeyHelper: 'Stored locally in your browser storage.',
+    apiKeyHelper: 'Stored in memory by default.',
     apiKeyClear: 'Clear key',
     apiKeyShow: 'Show',
     apiKeyHide: 'Hide'
